@@ -8,7 +8,7 @@ import {
   CheckSquare,
   MessageCircle,
   Calendar,
-  Shield,
+  // Shield,
   AlertTriangle,
   Settings,
   HelpCircle,
@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Logo } from "@/components/logo"
-import { SidebarNotification } from "@/components/sidebar-notification"
+// import { SidebarNotification } from "@/components/sidebar-notification"
 import { useAuth } from "@/contexts/auth-context"
 
 import { NavMain } from "@/components/nav-main"
@@ -91,51 +91,7 @@ const data = {
         {
           title: "Landing",
           url: "/landing",
-          target: "_blank",
           icon: LayoutTemplate,
-        },
-        {
-          title: "Auth Pages",
-          url: "#",
-          icon: Shield,
-          items: [
-            {
-              title: "Sign In 1",
-              url: "/auth/sign-in",
-            },
-            {
-              title: "Sign In 2",
-              url: "/auth/sign-in-2",
-            },
-            {
-              title: "Sign In 3",
-              url: "/auth/sign-in-3",
-            },
-            {
-              title: "Sign Up 1",
-              url: "/auth/sign-up",
-            },
-            {
-              title: "Sign Up 2",
-              url: "/auth/sign-up-2",
-            },
-            {
-              title: "Sign Up 3",
-              url: "/auth/sign-up-3",
-            },
-            {
-              title: "Forgot Password 1",
-              url: "/auth/forgot-password",
-            },
-            {
-              title: "Forgot Password 2",
-              url: "/auth/forgot-password-2",
-            },
-            {
-              title: "Forgot Password 3",
-              url: "/auth/forgot-password-3",
-            }
-          ],
         },
         {
           title: "Errors",
@@ -245,7 +201,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <SidebarNotification />
+        {/* <SidebarNotification /> */}
         <NavUser user={userData} />
       </SidebarFooter>
     </Sidebar>
