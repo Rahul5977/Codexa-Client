@@ -87,13 +87,13 @@ export function PricingSection() {
             >
               <ToggleGroupItem
                 value="monthly"
-                className="data-[state=on]:bg-background data-[state=on]:border-border border-transparent border px-6 !rounded-full data-[state=on]:text-foreground hover:bg-transparent cursor-pointer transition-colors"
+                className="data-[state=on]:bg-background data-[state=on]:border-border border-transparent border px-6 rounded-full! data-[state=on]:text-foreground hover:bg-transparent cursor-pointer transition-colors"
               >
                 Monthly
               </ToggleGroupItem>
               <ToggleGroupItem
                 value="yearly"
-                className="data-[state=on]:bg-background data-[state=on]:border-border border-transparent border px-6 !rounded-full data-[state=on]:text-foreground hover:bg-transparent cursor-pointer transition-colors"
+                className="data-[state=on]:bg-background data-[state=on]:border-border border-transparent border px-6 rounded-full! data-[state=on]:text-foreground hover:bg-transparent cursor-pointer transition-colors"
               >
                 Annually
               </ToggleGroupItem>
@@ -162,7 +162,7 @@ export function PricingSection() {
                       )}
                       {plan.features.map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-center gap-3">
-                          <Check className="text-muted-foreground size-4 flex-shrink-0" strokeWidth={2.5} />
+                          <Check className="text-muted-foreground size-4 shrink-0" strokeWidth={2.5} />
                           <span>{feature}</span>
                         </li>
                       ))}
