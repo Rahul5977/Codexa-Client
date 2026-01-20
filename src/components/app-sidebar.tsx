@@ -12,8 +12,6 @@ import {
   AlertTriangle,
   Settings,
   HelpCircle,
-  CreditCard,
-  LayoutTemplate,
   Users,
 } from "lucide-react"
 import { Link } from "react-router-dom"

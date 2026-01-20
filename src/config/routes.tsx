@@ -29,7 +29,6 @@ const UnderMaintenance = lazy(() => import('@/app/errors/under-maintenance/page'
 const UserSettings = lazy(() => import('@/app/settings/user/page'))
 const AccountSettings = lazy(() => import('@/app/settings/account/page'))
 const AppearanceSettings = lazy(() => import('@/app/settings/appearance/page'))
-const NotificationSettings = lazy(() => import('@/app/settings/notifications/page'))
 const ConnectionSettings = lazy(() => import('@/app/settings/connections/page'))
 
 export interface RouteConfig {
@@ -137,10 +136,6 @@ export const routes: RouteConfig[] = [
   {
     path: "/settings/appearance",
     element: <ProtectedRoute><AppearanceSettings /></ProtectedRoute>
-  },
-  {
-    path: "/settings/notifications",
-    element: <ProtectedRoute><NotificationSettings /></ProtectedRoute>
   },
   {
     path: "/settings/connections",
