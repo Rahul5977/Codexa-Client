@@ -111,10 +111,10 @@ export function TestimonialsSection() {
         {/* Testimonials Masonry Grid */}
         <div className="columns-1 gap-4 md:columns-2 md:gap-6 lg:columns-3 lg:gap-4">
           {testimonials.map((testimonial, index) => (
-            <Card key={index} className="mb-6 break-inside-avoid shadow-none lg:mb-4">
+            <Card key={index} className="group mb-6 break-inside-avoid shadow-none lg:mb-4 hover:bg-linear-to-br hover:from-primary/5 hover:to-purple-500/5 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 hover:scale-105 cursor-pointer border-border/50 hover:border-primary/30">
               <CardContent>
                 <div className="flex items-start gap-4">
-                  <Avatar className="bg-muted size-12 shrink-0">
+                  <Avatar className="bg-muted size-12 shrink-0 group-hover:ring-2 group-hover:ring-purple-500 transition-all duration-300">
                     <AvatarImage
                       alt={testimonial.name}
                       src={testimonial.image}
@@ -132,9 +132,9 @@ export function TestimonialsSection() {
 
                   <div className="min-w-0 flex-1">
                     <a href="#" onClick={e => e.preventDefault()} className="cursor-pointer">
-                      <h3 className="font-medium hover:text-primary transition-colors">{testimonial.name}</h3>
+                      <h3 className="font-medium hover:text-primary group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">{testimonial.name}</h3>
                     </a>
-                    <span className="text-muted-foreground block text-sm tracking-wide">
+                    <span className="text-muted-foreground block text-sm tracking-wide group-hover:text-primary/70 transition-colors duration-300">
                       {testimonial.role}
                     </span>
                   </div>

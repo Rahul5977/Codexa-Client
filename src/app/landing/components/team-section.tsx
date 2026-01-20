@@ -135,13 +135,13 @@ export function TeamSection() {
         {/* Team Grid */}
         <div className="grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 xl:grid-cols-4">
           {team.map((member) => (
-            <Card key={member.id} className="shadow-xs py-2">
+            <Card key={member.id} className="group shadow-xs py-2 hover:border-purple-600 dark:hover:border-purple-400 hover:scale-105 transition-all duration-300 cursor-pointer">
               <CardContent className="p-4">
                 <div className="text-center">
                   {/* Avatar */}
                   <div className="flex justify-center mb-4">
                     <CardDecorator>
-                      <Avatar className="h-24 w-24 border shadow-lg">
+                      <Avatar className="h-24 w-24 border shadow-lg group-hover:ring-2 group-hover:ring-purple-500/30 transition-all duration-300 group-hover:scale-110">
                         <AvatarImage
                           src={member.image}
                           alt={member.name}
@@ -155,10 +155,10 @@ export function TeamSection() {
                   </div>
 
                   {/* Name and Role */}
-                  <h3 className="text-lg font-semibold text-foreground mb-1">
+                  <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
                     {member.name}
                   </h3>
-                  <p className="text-sm font-medium text-primary mb-3">
+                  <p className="text-sm font-medium text-primary mb-3 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
                     {member.role}
                   </p>
 
@@ -168,16 +168,15 @@ export function TeamSection() {
                   </p>
 
                   {/* Social Links */}
-                  <div className="flex items-center justify-center gap-3">
+                  <div className="flex items-center justify-center gap-3 text-muted-foreground">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 cursor-pointer hover:text-primary"
+                      className="h-8 w-8 cursor-pointer group-hover:text-[#0077b5] transition-all duration-300 hover:scale-110"
                       asChild
                     >
                       <a
                         href={member.social.linkedin}
-
                         rel="noopener noreferrer"
                         aria-label={`${member.name} LinkedIn`}
                       >
@@ -187,12 +186,11 @@ export function TeamSection() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 cursor-pointer hover:text-primary"
+                      className="h-8 w-8 cursor-pointer group-hover:text-[#333] dark:group-hover:text-white transition-all duration-300 hover:scale-110"
                       asChild
                     >
                       <a
                         href={member.social.github}
-
                         rel="noopener noreferrer"
                         aria-label={`${member.name} GitHub`}
                       >
@@ -202,12 +200,11 @@ export function TeamSection() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 cursor-pointer hover:text-primary"
+                      className="h-8 w-8 cursor-pointer group-hover:text-[#4285f4] transition-all duration-300 hover:scale-110"
                       asChild
                     >
                       <a
                         href={member.social.website}
-
                         rel="noopener noreferrer"
                         aria-label={`${member.name} Website`}
                       >

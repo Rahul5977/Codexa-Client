@@ -50,19 +50,19 @@ export function StatsSection() {
           {stats.map((stat, index) => (
             <Card
               key={index}
-              className="text-center bg-background/60 backdrop-blur-sm border-border/50 py-0"
+              className="group text-center bg-background/60 backdrop-blur-sm border-border/50 py-0 "
             >
               <CardContent className="p-6">
                 <div className="flex justify-center mb-4">
                   <div className="p-3 bg-primary/10 rounded-xl">
-                    <stat.icon className="h-6 w-6 text-primary" />
+                    <stat.icon className="h-6 w-6 text-primary group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors duration-300" />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <h3 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  <h3 className="text-2xl sm:text-3xl font-bold text-foreground group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors duration-300">
                     {stat.value}
                   </h3>
-                  <p className="font-semibold text-foreground">{stat.label}</p>
+                  <p className="font-semibold text-foreground group-hover:text-purple-500 dark:group-hover:text-purple-400/80 transition-colors duration-300">{stat.label}</p>
                   <p className="text-sm text-muted-foreground">{stat.description}</p>
                 </div>
               </CardContent>

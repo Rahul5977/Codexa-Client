@@ -19,7 +19,7 @@ export function HeroSection() {
         <div className="mx-auto max-w-4xl text-center">
           {/* Announcement Badge */}
           <div className="mb-8 flex justify-center">
-            <Badge variant="outline" className="px-4 py-2 border-foreground">
+            <Badge variant="outline" className="px-4 py-2 border-foreground hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-600 dark:hover:border-purple-400 transition-colors duration-300">
               <Star className="w-3 h-3 mr-2 fill-current" />
               New: AI-Powered Code Analysis
               <ArrowRight className="w-3 h-3 ml-2" />
@@ -86,7 +86,7 @@ export function HeroSection() {
               <div className="absolute inset-0 flex items-center justify-center">
                 <Button
                   size="lg"
-                  className="rounded-full h-16 w-16 p-0 cursor-pointer hover:scale-105 transition-transform"
+                  className="rounded-full h-16 w-16 p-0 cursor-pointer hover:scale-105 group-hover:bg-purple-600 dark:group-hover:bg-purple-400 transition-colors duration-300"
                   asChild
                 >
                   <a href="#" aria-label="Watch demo video">

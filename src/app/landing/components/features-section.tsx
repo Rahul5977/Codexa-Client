@@ -102,10 +102,10 @@ export function FeaturesSection() {
               {mainFeatures.map((feature, index) => (
                 <li key={index} className="group hover:bg-accent/5 flex items-start gap-3 p-2 rounded-lg transition-colors">
                   <div className="mt-0.5 flex shrink-0 items-center justify-center">
-                    <feature.icon className="size-5 text-primary" aria-hidden="true" />
+                    <feature.icon className="size-5 text-primary group-hover:text-purple-600 dark:group-hover:text-purple-400" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-foreground font-medium">{feature.title}</h3>
+                    <h3 className="text-foreground font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400">{feature.title}</h3>
                     <p className="text-muted-foreground mt-1 text-sm">{feature.description}</p>
                   </div>
                 </li>
@@ -146,10 +146,10 @@ export function FeaturesSection() {
               {secondaryFeatures.map((feature, index) => (
                 <li key={index} className="group hover:bg-accent/5 flex items-start gap-3 p-2 rounded-lg transition-colors">
                   <div className="mt-0.5 flex shrink-0 items-center justify-center">
-                    <feature.icon className="size-5 text-primary" aria-hidden="true" />
+                    <feature.icon className="size-5 text-primary group-hover:text-purple-600 dark:group-hover:text-purple-400" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-foreground font-medium">{feature.title}</h3>
+                    <h3 className="text-foreground font-medium group-hover:text-purple-600 dark:group-hover:text-purple-400">{feature.title}</h3>
                     <p className="text-muted-foreground mt-1 text-sm">{feature.description}</p>
                   </div>
                 </li>

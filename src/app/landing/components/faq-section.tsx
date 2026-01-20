@@ -71,13 +71,13 @@ const FaqSection = () => {
             <div className='p-0'>
               <Accordion type='single' collapsible className='space-y-5'>
                 {faqItems.map(item => (
-                  <AccordionItem key={item.value} value={item.value} className='rounded-md !border bg-transparent'>
+                  <AccordionItem key={item.value} value={item.value} className='group rounded-md border! transition-all duration-300 cursor-pointer'>
                     <AccordionTrigger className='cursor-pointer items-center gap-4 rounded-none bg-transparent py-2 ps-3 pe-4 hover:no-underline data-[state=open]:border-b'>
                       <div className='flex items-center gap-4'>
-                        <div className='bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full'>
-                          <CircleHelp className='size-5' />
+                        <div className='bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-300'>
+                          <CircleHelp className='size-5 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300' />
                         </div>
-                        <span className='text-start font-semibold'>{item.question}</span>
+                        <span className='text-start font-semibold group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300'>{item.question}</span>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className='p-4 bg-transparent'>{item.answer}</AccordionContent>

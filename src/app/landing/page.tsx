@@ -16,12 +16,17 @@ import { FaqSection } from './components/faq-section'
 import { LandingFooter } from './components/footer'
 import { LandingThemeCustomizer, LandingThemeCustomizerTrigger } from './components/landing-theme-customizer'
 import { AboutSection } from './components/about-section'
+import { CursorGlow } from '@/components/cursor-glow'
 
 export default function LandingPage() {
   const [themeCustomizerOpen, setThemeCustomizerOpen] = React.useState(false)
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      
+      {/* Cursor Glow Effect */}
+      <CursorGlow />
+      
       {/* Navigation */}
       <LandingNavbar />
 

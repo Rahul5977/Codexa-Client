@@ -37,7 +37,7 @@ const SimpleIcon = ({ iconSlug, size = 24 }: { iconSlug: string; size?: number }
   }
 
   return (
-    <svg role='img' viewBox='0 0 24 24' className='fill-black dark:fill-white' style={{ width: size, height: size }}>
+    <svg role='img' viewBox='0 0 24 24' className='fill-black dark:fill-white transition-all duration-300 group-hover:fill-purple-500 dark:group-hover:fill-purple-400' style={{ width: size, height: size }}>
       <path d={iconPath} />
     </svg>
   )
@@ -71,10 +71,10 @@ export function LogoCarousel() {
           {/* Logo Carousel with Fade Effect */}
           <div className="relative">
             {/* Left Fade */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute left-0 top-0 bottom-0 w-20 bg-linear-to-r from-background to-transparent z-10 pointer-events-none" />
 
             {/* Right Fade */}
-            <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-20 bg-linear-to-l from-background to-transparent z-10 pointer-events-none" />
 
             {/* Logo Container */}
             <div className="overflow-hidden">
@@ -83,11 +83,11 @@ export function LogoCarousel() {
                 {techCompanies.map((company, index) => (
                   <Card
                     key={`first-${index}`}
-                    className="flex-shrink-0 flex items-center justify-center h-16 w-40 opacity-60 hover:opacity-100 transition-opacity duration-300 border-0 shadow-none bg-transparent"
+                    className="group shrink-0 flex items-center justify-center h-16 w-40 opacity-60 hover:opacity-100 transition-all duration-300 border-0 shadow-none bg-transparent "
                   >
                     <div className="flex items-center gap-3">
                       <SimpleIcon iconSlug={company.id} size={28} />
-                      <span className="text-foreground text-lg font-semibold whitespace-nowrap">
+                      <span className="text-foreground text-lg font-semibold whitespace-nowrap group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
                         {company.name}
                       </span>
                     </div>
@@ -97,11 +97,11 @@ export function LogoCarousel() {
                 {techCompanies.map((company, index) => (
                   <Card
                     key={`second-${index}`}
-                    className="flex-shrink-0 flex items-center justify-center h-16 w-40 opacity-60 hover:opacity-100 transition-opacity duration-300 border-0 shadow-none bg-transparent"
+                    className="group shrink-0 flex items-center justify-center h-16 w-40 opacity-60 hover:opacity-100 transition-all duration-300 border-0 shadow-none bg-transparent "
                   >
                     <div className="flex items-center gap-3">
                       <SimpleIcon iconSlug={company.id} size={28} />
-                      <span className="text-foreground text-lg font-semibold whitespace-nowrap">
+                      <span className="text-foreground text-lg font-semibold whitespace-nowrap group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
                         {company.name}
                       </span>
                     </div>

@@ -55,9 +55,9 @@ export function AboutSection() {
               <CardContent className='p-8'>
                 <div className='flex flex-col items-center text-center'>
                   <CardDecorator>
-                    <value.icon className='h-6 w-6' aria-hidden />
+                    <value.icon className='h-6 w-6 group-hover:text-purple-600 dark:group-hover:text-purple-400' aria-hidden />
                   </CardDecorator>
-                  <h3 className='mt-6 font-medium text-balance'>{value.title}</h3>
+                  <h3 className='mt-6 font-medium text-balance group-hover:text-purple-600 dark:group-hover:text-purple-400'>{value.title}</h3>
                   <p className='text-muted-foreground mt-3 text-sm'>{value.description}</p>
                 </div>
               </CardContent>
