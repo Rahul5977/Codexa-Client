@@ -12,7 +12,7 @@ export function SiteFooter() {
             <span>by</span>
             <Link
               to="https://codexastore.com"
-              target="_blank"
+
               rel="noopener noreferrer"
               className="font-medium text-foreground hover:text-primary transition-colors"
             >

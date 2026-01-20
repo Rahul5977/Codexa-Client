@@ -31,7 +31,7 @@ export function SidebarNotification() {
               Welcome to{" "}
               <a
                 href="https://codexastore.com"
-                target="_blank"
+
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
@@ -43,7 +43,7 @@ export function SidebarNotification() {
             Explore our premium Codexa UI{" "}
             <a
               href="https://codexastore.com/blocks"
-              target="_blank"
+
               rel="noopener noreferrer"
               className="text-primary underline"
             >

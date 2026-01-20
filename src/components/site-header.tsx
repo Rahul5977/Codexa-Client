@@ -40,7 +40,7 @@ export function SiteHeader() {
               <a
                 href="https://codexastore.com/blocks"
                 rel="noopener noreferrer"
-                target="_blank"
+
                 className="dark:text-foreground"
               >
                 Blocks
@@ -50,7 +50,7 @@ export function SiteHeader() {
               <a
                 href={getAppUrl("/landing")}
                 rel="noopener noreferrer"
-                target="_blank"
+
                 className="dark:text-foreground"
               >
                 Landing Page
@@ -60,7 +60,7 @@ export function SiteHeader() {
               <a
                 href="https://github.com/silicondeck/codexa-dashboard-landing-template"
                 rel="noopener noreferrer"
-                target="_blank"
+
                 className="dark:text-foreground"
               >
                 GitHub

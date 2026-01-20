@@ -83,7 +83,7 @@ export function ContactSection() {
                   Join our active community for quick help and discussions with other developers.
                 </p>
                 <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-                  <a href="https://discord.com/invite/XEQhPc9a6p" target="_blank" rel="noopener noreferrer">
+                  <a href="https://discord.com/invite/XEQhPc9a6p" rel="noopener noreferrer">
                     Join Discord
                   </a>
                 </Button>
@@ -102,7 +102,7 @@ export function ContactSection() {
                   Report bugs, request features, or contribute to our open source repository.
                 </p>
                 <Button variant="outline" size="sm" className="cursor-pointer" asChild>
-                  <a href="https://github.com/silicondeck/codexa-dashboard-landing-template/issues" target="_blank" rel="noopener noreferrer">
+                  <a href="https://github.com/silicondeck/codexa-dashboard-landing-template/issues" rel="noopener noreferrer">
                     View on GitHub
                   </a>
                 </Button>

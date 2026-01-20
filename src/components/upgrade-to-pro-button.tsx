@@ -28,7 +28,7 @@ export function UpgradeToProButton() {
         </HoverCardTrigger>
         <HoverCardContent className="mb-3 w-90 rounded-xl shadow-2xl bg-background border border-border p-3 animate-in fade-in slide-in-from-bottom-4 relative mr-4 md:mr-6 lg:mr-8">
           <div className="flex flex-col items-center text-center gap-3">
-            <a href={CODEXA_BLOCKS_URL} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+            <a href={CODEXA_BLOCKS_URL} rel="noopener noreferrer" className="cursor-pointer">
               <img
                 src={assetUrl("hero-images-container.png")}
                 alt="Dashboard Preview"
@@ -47,7 +47,7 @@ export function UpgradeToProButton() {
             </p>
             <div className="flex flex-row gap-2 w-full mt-2 justify-center">
               <div className="relative w-1/2">
-                <a href={CODEXA_BLOCKS_URL} target="_blank" rel="noopener noreferrer">
+                <a href={CODEXA_BLOCKS_URL} rel="noopener noreferrer">
                   <Button className="w-full flex items-center justify-center cursor-pointer" variant="default">
                     <Blocks size={16} />
                     Pro Blocks

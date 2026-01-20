@@ -124,7 +124,7 @@ export function LandingFooter() {
                   <a
                     href={social.href}
                     aria-label={social.name}
-                    target="_blank"
+
                     rel="noopener noreferrer"
                   >
                     <social.icon className="h-4 w-4" />

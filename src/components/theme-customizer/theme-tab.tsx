@@ -292,7 +292,7 @@ export function ThemeTab({
           For advanced theme customization with real-time preview, visual color picker, and hundreds of prebuilt themes, visit{" "}
           <a
             href="https://tweakcn.com/editor/theme"
-            target="_blank"
+
             rel="noopener noreferrer"
             className="text-primary hover:underline font-medium cursor-pointer"
           >
