@@ -28,6 +28,7 @@ import { Logo } from '@/components/logo'
 import { MegaMenu } from '@/components/landing/mega-menu'
 import { ModeToggle } from '@/components/mode-toggle'
 import { useTheme } from '@/hooks/use-theme'
+import { useAuth } from '@/contexts/auth-context'
 
 const navigationItems = [
   { name: 'Home', href: '#hero' },
@@ -75,6 +76,7 @@ export function LandingNavbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [solutionsOpen, setSolutionsOpen] = useState(false)
   const { setTheme, theme } = useTheme()
+  const { isAuthenticated } = useAuth()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-backdrop-filter:bg-background/60">
@@ -131,18 +133,25 @@ export function LandingNavbar() {
               <Github className="h-5 w-5" />
             </a>
           </Button>
-          <Button variant="outline" asChild className="cursor-pointer">
-            <a href={getAppUrl("/dashboard")} rel="noopener noreferrer">
-              <LayoutDashboard className="h-4 w-4 mr-2" />
-              Dashboard
-            </a>
-          </Button>
-          <Button variant="ghost" asChild className="cursor-pointer">
-            <a href={getAppUrl("/auth/sign-in")}>Sign In</a>
-          </Button>
-          <Button asChild className="cursor-pointer">
-            <a href={getAppUrl("/auth/sign-up")}>Get Started</a>
-          </Button>
+          {isAuthenticated ? (
+            // Show only Dashboard button when authenticated
+            <Button variant="outline" asChild className="cursor-pointer">
+              <a href={getAppUrl("/dashboard")} rel="noopener noreferrer">
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Dashboard
+              </a>
+            </Button>
+          ) : (
+            // Show Sign In and Get Started buttons when not authenticated
+            <>
+              <Button variant="ghost" asChild className="cursor-pointer">
+                <a href={getAppUrl("/auth/sign-in")}>Sign In</a>
+              </Button>
+              <Button asChild className="cursor-pointer">
+                <a href={getAppUrl("/auth/sign-up")}>Get Started</a>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -245,24 +254,27 @@ export function LandingNavbar() {
 
               {/* Footer Actions */}
               <div className="border-t p-6 space-y-4">
-
                 {/* Primary Actions */}
                 <div className="space-y-3">
-                  <Button variant="outline" size="lg" asChild className="w-full cursor-pointer">
-                    <a href={getAppUrl("/dashboard")}>
-                      <LayoutDashboard className="size-4" />
-                      Dashboard
-                    </a>
-                  </Button>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" size="lg" asChild className="cursor-pointer">
-                      <a href={getAppUrl("/auth/sign-in")}>Sign In</a>
+                  {isAuthenticated ? (
+                    // Show only Dashboard button when authenticated
+                    <Button variant="outline" size="lg" asChild className="w-full cursor-pointer">
+                      <a href={getAppUrl("/dashboard")}>
+                        <LayoutDashboard className="size-4" />
+                        Dashboard
+                      </a>
                     </Button>
-                    <Button asChild size="lg" className="cursor-pointer" >
-                      <a href={getAppUrl("/auth/sign-up")}>Get Started</a>
-                    </Button>
-                  </div>
+                  ) : (
+                    // Show Sign In and Get Started buttons when not authenticated
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button variant="outline" size="lg" asChild className="cursor-pointer">
+                        <a href={getAppUrl("/auth/sign-in")}>Sign In</a>
+                      </Button>
+                      <Button asChild size="lg" className="cursor-pointer">
+                        <a href={getAppUrl("/auth/sign-up")}>Get Started</a>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
