@@ -7,9 +7,9 @@ import {
   ArrowRight,
   Database,
   Package,
-  Crown,
-  Layout,
-  Palette
+  Brain,
+  Target,
+  Code2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,47 +17,47 @@ import { Image3D } from '@/components/image-3d'
 
 const mainFeatures = [
   {
-    icon: Package,
-    title: 'Curated Component Library',
-    description: 'Hand-picked blocks and templates for quality and reliability.'
+    icon: Brain,
+    title: 'AI-Powered Analysis',
+    description: 'Get instant feedback on complexity, efficiency, and performance patterns.'
   },
   {
-    icon: Crown,
-    title: 'Free & Premium Options',
-    description: 'Start free, upgrade to premium collections when you need more.'
+    icon: Target,
+    title: 'Personalized Learning',
+    description: 'AI mentor adapts to your skill level and provides targeted guidance.'
   },
   {
-    icon: Layout,
-    title: 'Ready-to-Use Templates',
-    description: 'Copy-paste components that just work out of the box.'
+    icon: Code2,
+    title: 'Smart Code Review',
+    description: 'Deep analysis beyond correctness - scalability and optimization insights.'
   },
   {
     icon: Zap,
-    title: 'Regular Updates',
-    description: 'New blocks and templates added weekly to keep you current.'
+    title: 'Real-time Feedback',
+    description: 'Instant complexity estimation and performance predictions.'
   }
 ]
 
 const secondaryFeatures = [
   {
     icon: BarChart3,
-    title: 'Multiple Frameworks',
-    description: 'React, Next.js, and Vite compatibility for flexible development.'
-  },
-  {
-    icon: Palette,
-    title: 'Modern Tech Stack',
-    description: 'Built with codexa/ui, Tailwind CSS, and TypeScript.'
-  },
-  {
-    icon: Users,
-    title: 'Responsive Design',
-    description: 'Mobile-first components for all screen sizes and devices.'
+    title: 'Performance Visualization',
+    description: 'Visual graphs showing how your algorithm scales with input size.'
   },
   {
     icon: Database,
-    title: 'Developer-Friendly',
-    description: 'Clean code, well-documented, easy integration and customization.'
+    title: 'Growth Tracking',
+    description: 'Monitor your progress across different topics and difficulty levels.'
+  },
+  {
+    icon: Users,
+    title: 'Community Contests',
+    description: 'Participate in coding competitions and learn from peer solutions.'
+  },
+  {
+    icon: Package,
+    title: 'Comprehensive Problems',
+    description: 'Curated problem sets covering all algorithmic concepts and patterns.'
   }
 ]
 
@@ -67,12 +67,13 @@ export function FeaturesSection() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="mx-auto max-w-2xl text-center mb-16">
-          <Badge variant="outline" className="mb-4">Marketplace Features</Badge>
+          <Badge variant="outline" className="mb-4">Platform Features</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Everything you need to build amazing web applications
+            Beyond traditional coding practice
           </h2>
           <p className="text-lg text-muted-foreground">
-            Our marketplace provides curated blocks, templates, landing pages, and admin dashboards to help you build professional applications faster than ever.
+            Codexa combines competitive programming with intelligent analysis, creating a comprehensive
+            learning environment that transforms how you approach algorithmic thinking.
           </p>
         </div>
 
@@ -89,10 +90,11 @@ export function FeaturesSection() {
           <div className="space-y-6">
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Components that accelerate development
+                AI that understands your code deeply
               </h3>
               <p className="text-muted-foreground text-base text-pretty">
-                Our curated marketplace offers premium blocks and templates designed to save time and ensure consistency across your admin projects.
+                Our advanced AI doesn't just check if your solution works - it analyzes efficiency,
+                predicts performance at scale, and provides insights that help you become a better programmer.
               </p>
             </div>
 
@@ -112,14 +114,14 @@ export function FeaturesSection() {
 
             <div className="flex flex-col sm:flex-row gap-4 pe-4 pt-2">
               <Button size="lg" className="cursor-pointer">
-                <a href="https://codexastore.com/templates" className='flex items-center'>
-                  Browse Templates
+                <a href="#" className='flex items-center'>
+                  Try AI Analysis
                   <ArrowRight className="ms-2 size-4" aria-hidden="true" />
                 </a>
               </Button>
               <Button size="lg" variant="outline" className="cursor-pointer">
-                <a href="https://codexastore.com/blocks">
-                  View Components
+                <a href="#">
+                  View Problems
                 </a>
               </Button>
             </div>
@@ -132,10 +134,11 @@ export function FeaturesSection() {
           <div className="space-y-6 order-2 lg:order-1">
             <div className="space-y-4">
               <h3 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                Built for modern development workflows
+                Learn, compete, and grow together
               </h3>
               <p className="text-muted-foreground text-base text-pretty">
-                Every component follows best practices with TypeScript, responsive design, and clean code architecture that integrates seamlessly into your projects.
+                Join a community of passionate programmers where you can track your progress,
+                participate in contests, and learn from diverse problem-solving approaches.
               </p>
             </div>
 

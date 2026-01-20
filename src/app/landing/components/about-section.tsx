@@ -4,28 +4,28 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { CardDecorator } from '@/components/ui/card-decorator'
-import { Github, Code, Palette, Layout, Crown } from 'lucide-react'
+import { Github, Brain, Code, BarChart3, Users } from 'lucide-react'
 
 const values = [
   {
+    icon: Brain,
+    title: 'AI-Powered Analysis',
+    description: 'Advanced AI evaluates your code beyond correctness - analyzing efficiency, scalability, and performance patterns.'
+  },
+  {
+    icon: BarChart3,
+    title: 'Performance Insights',
+    description: 'Get detailed complexity analysis, runtime predictions, and scalability simulations for every solution.'
+  },
+  {
     icon: Code,
-    title: 'Developer First',
-    description: 'Every component is built with the developer experience in mind, ensuring clean code and easy integration.'
+    title: 'Smart Mentoring',
+    description: 'AI mentor provides personalized guidance, hints, and optimized strategies to improve your coding skills.'
   },
   {
-    icon: Palette,
-    title: 'Design Excellence',
-    description: 'We maintain the highest design standards, following codexa/ui principles and modern UI patterns.'
-  },
-  {
-    icon: Layout,
-    title: 'Production Ready',
-    description: 'Battle-tested components used in real applications with proven performance and reliability across different environments.'
-  },
-  {
-    icon: Crown,
-    title: 'Premium Quality',
-    description: 'Hand-crafted with attention to detail and performance optimization, ensuring exceptional user experience and accessibility.'
+    icon: Users,
+    title: 'Community Learning',
+    description: 'Connect with developers, compare solutions, participate in contests, and learn from diverse approaches.'
   }
 ]
 
@@ -39,11 +39,12 @@ export function AboutSection() {
             About Codexa
           </Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-            Built for developers, by developers
+            Intelligent coding platform for the future
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            We're passionate about creating the best marketplace for codexa/ui components and templates.
-            Our mission is to accelerate development and help developers build beautiful admin interfaces faster.
+            Codexa transforms how programmers learn and practice code by combining competitive programming
+            with AI-powered performance analysis, creating an environment that understands how you think
+            and teaches you to think better.
           </p>
         </div>
 
@@ -67,7 +68,7 @@ export function AboutSection() {
         {/* Call to Action */}
         <div className="mt-16 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
-            <span className="text-muted-foreground">❤️ Made with love for the developer community</span>
+            <span className="text-muted-foreground">🚀 Elevating the next generation of programmers</span>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="cursor-pointer" asChild>
@@ -78,7 +79,7 @@ export function AboutSection() {
             </Button>
             <Button size="lg" variant="outline" className="cursor-pointer" asChild>
               <a href="https://discord.com/invite/XEQhPc9a6p" rel="noopener noreferrer">
-                Join Discord Community
+                Join Community
               </a>
             </Button>
           </div>

@@ -8,8 +8,8 @@ import { StatsSection } from './components/stats-section'
 import { FeaturesSection } from './components/features-section'
 import { TeamSection } from './components/team-section'
 import { TestimonialsSection } from './components/testimonials-section'
-import { BlogSection } from './components/blog-section'
-import { PricingSection } from './components/pricing-section'
+// import { BlogSection } from './components/blog-section'
+// import { PricingSection } from './components/pricing-section'
 import { CTASection } from './components/cta-section'
 import { ContactSection } from './components/contact-section'
 import { FaqSection } from './components/faq-section'
@@ -33,9 +33,9 @@ export default function LandingPage() {
         <AboutSection />
         <FeaturesSection />
         <TeamSection />
-        <PricingSection />
+        {/* <PricingSection /> */}
         <TestimonialsSection />
-        <BlogSection />
+        {/* <BlogSection /> */}
         <FaqSection />
         <CTASection />
         <ContactSection />

@@ -9,53 +9,53 @@ import { useState } from 'react'
 const plans = [
   {
     name: 'Free',
-    description: 'Perfect for getting started with essential components',
+    description: 'Perfect for getting started with coding practice',
     monthlyPrice: 0,
     yearlyPrice: 0,
     features: [
-      'Access to 50+ free components',
-      'Basic dashboard templates',
-      'Community support',
-      'GitHub repository access',
-      'Documentation and guides'
+      'Access to 100+ coding problems',
+      'Basic AI analysis feedback',
+      'Community discussions',
+      'Progress tracking',
+      'Standard complexity insights'
     ],
-    cta: 'Get Started',
+    cta: 'Start Learning',
     popular: false
   },
   {
     name: 'Pro',
-    description: 'For developers who need premium templates and components',
+    description: 'For serious programmers who want advanced AI insights',
     monthlyPrice: 19,
     yearlyPrice: 15,
     features: [
-      'Premium template collection',
-      'Advanced dashboard layouts',
+      'Unlimited problem access',
+      'Advanced AI mentoring',
+      'Detailed performance analysis',
+      'Contest participation',
+      'Personalized learning paths',
+      'Performance visualization',
+      'Compare with top solutions',
       'Priority support',
-      'Commercial use license',
-      'Early access to new releases',
-      'Figma design files',
-      'Custom component requests',
-      'Direct developer access',
-      'Exclusive design resources'
+      'Code optimization suggestions'
     ],
-    cta: 'Get Started',
+    cta: 'Upgrade Now',
     popular: true,
     includesPrevious: 'All Free features, plus'
   },
   {
     name: 'Lifetime',
     description: 'One-time payment for lifetime access to everything',
-    monthlyPrice: 299,
-    yearlyPrice: 299,
+    monthlyPrice: 199,
+    yearlyPrice: 199,
     features: [
-      'Lifetime updates and support',
-      'Private Discord channel',
+      'Lifetime platform access',
+      'All future AI features',
       'No recurring fees ever',
-      'Future template access',
-      'VIP support priority',
-      'Exclusive beta features'
+      'VIP community access',
+      'Priority feature requests',
+      'Exclusive beta testing'
     ],
-    cta: 'Get Started',
+    cta: 'Get Lifetime Access',
     popular: false,
     includesPrevious: 'All Pro features, plus'
   }
@@ -71,10 +71,10 @@ export function PricingSection() {
         <div className="mx-auto max-w-2xl text-center mb-12">
           <Badge variant="outline" className="mb-4">Pricing Plans</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Choose your plan
+            Choose your learning journey
           </h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Start building with our free components or upgrade to Pro for access to premium templates and advanced features.
+            Start with free access to problems and basic AI feedback, or upgrade for advanced mentoring and insights.
           </p>
 
           {/* Billing Toggle */}
@@ -112,11 +112,10 @@ export function PricingSection() {
               {plans.map((plan, index) => (
                 <div
                   key={index}
-                  className={`p-8 grid grid-rows-subgrid row-span-4 gap-6 ${
-                    plan.popular
+                  className={`p-8 grid grid-rows-subgrid row-span-4 gap-6 ${plan.popular
                       ? 'my-2 mx-4 rounded-xl bg-card border-transparent shadow-xl ring-1 ring-foreground/10 backdrop-blur'
                       : ''
-                  }`}
+                    }`}
                 >
                   {/* Plan Header */}
                   <div>
@@ -143,11 +142,10 @@ export function PricingSection() {
                   {/* CTA Button */}
                   <div>
                     <Button
-                      className={`w-full cursor-pointer my-2 ${
-                        plan.popular
+                      className={`w-full cursor-pointer my-2 ${plan.popular
                           ? 'shadow-md border-[0.5px] border-white/25 shadow-black/20 bg-primary ring-1 ring-primary/15 text-primary-foreground hover:bg-primary/90'
                           : 'shadow-sm shadow-black/15 border border-transparent bg-background ring-1 ring-foreground/10 hover:bg-muted/50'
-                      }`}
+                        }`}
                       variant={plan.popular ? 'default' : 'secondary'}
                     >
                       {plan.cta}

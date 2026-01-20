@@ -14,82 +14,82 @@ type Testimonial = {
 const testimonials: Testimonial[] = [
   {
     name: 'Alexandra Mitchell',
-    role: 'Senior Frontend Developer',
+    role: 'Software Engineer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=female-1',
     quote:
-      'This platform has completely transformed our development workflow. The component system is so well-architected that even complex applications feel simple to build.',
+      'Codexa\'s AI analysis completely changed how I approach problem-solving. It taught me to think about efficiency from the start, not as an afterthought.',
   },
   {
     name: 'James Thompson',
-    role: 'Technical Lead',
+    role: 'Computer Science Student',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=male-1',
-    quote: 'After trying countless frameworks, this is the one that finally clicked. The documentation is exceptional.',
+    quote: 'The AI mentor is like having a personal tutor. It explains not just what\'s wrong, but why and how to improve.',
   },
   {
     name: 'Priya Sharma',
-    role: 'Product Designer',
+    role: 'Backend Developer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=female-2',
     quote:
-      'The design system is beautiful and consistent. I can prototype ideas quickly and hand them off to developers with confidence that the implementation will match perfectly.',
+      'The performance visualization helped me understand Big O notation better than any textbook. Seeing my algorithms scale in real-time was a game-changer.',
   },
   {
     name: 'Robert Kim',
-    role: 'Engineering Manager',
+    role: 'Data Scientist',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=male-2',
     quote:
-      'We migrated our entire application to this platform in just two weeks. The performance improvements were immediate.',
+      'Codexa helped me transition from academia to industry. The platform taught me how to write production-ready code, not just algorithms.',
   },
   {
     name: 'Maria Santos',
-    role: 'Full Stack Engineer',
+    role: 'Full Stack Developer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=female-3',
     quote:
-      'The accessibility features are top-notch. Building inclusive applications has never been easier. Every component follows best practices out of the box, and the automated testing suite ensures we maintain high accessibility standards throughout our development process.',
+      'The contest feature is addictive! Competing with friends while learning from their solutions has accelerated my growth tremendously. The AI feedback keeps me motivated to improve.',
   },
   {
     name: 'Thomas Anderson',
-    role: 'Solutions Architect',
+    role: 'Tech Lead',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=male-3',
-    quote: 'Scalability was our biggest concern, but this platform handles enterprise-level complexity with ease.',
+    quote: 'I use Codexa to prepare my team for technical interviews. The insights help us identify optimization opportunities we never considered before.',
   },
   {
     name: 'Lisa Chang',
-    role: 'UX Researcher',
+    role: 'CS Professor',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=female-4',
     quote:
-      'User testing results have been consistently positive since we adopted this platform. The user experience is intuitive and the performance is stellar. Our user satisfaction scores have increased by 40% since the migration.',
+      'I recommend Codexa to all my students. The personalized learning paths adapt to each student\'s progress, and the detailed analysis helps them understand algorithmic complexity deeply.',
   },
   {
     name: 'Michael Foster',
-    role: 'DevOps Engineer',
+    role: 'Software Engineer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=male-4',
-    quote: 'Deployment and maintenance are a breeze. The platform integrates seamlessly with our CI/CD pipeline.',
+    quote: 'The growth dashboard showed me patterns in my coding I never noticed. Now I can see my weak areas and focus my learning effectively.',
   },
   {
     name: 'Sophie Laurent',
-    role: 'Creative Director',
+    role: 'Algorithm Engineer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=female-5',
     quote:
-      'The creative possibilities are endless. We can bring any design concept to life without compromising on technical quality or user experience.',
+      'Codexa\'s community feature is amazing. Seeing how others solve the same problem with different approaches has broadened my problem-solving toolkit significantly.',
   },
   {
     name: 'Daniel Wilson',
-    role: 'Backend Developer',
+    role: 'Junior Developer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=male-5',
-    quote: 'The API design is exceptional. Clean, intuitive, and well-documented.',
+    quote: 'The AI mentor explains concepts so clearly. It\'s like having a senior developer reviewing every piece of code I write.',
   },
   {
     name: 'Natasha Petrov',
-    role: 'Mobile App Developer',
+    role: 'Mobile Developer',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=female-6',
     quote:
-      'Cross-platform development has never been this efficient. One codebase, multiple platforms, consistent user experience. This is the future. The responsive design system ensures our apps look perfect on every device.',
+      'The performance insights helped me optimize my mobile algorithms. I never realized how much my nested loops were affecting user experience until Codexa showed me the complexity analysis.',
   },
   {
     name: 'Carlos Rivera',
-    role: 'Startup Founder',
+    role: 'Coding Bootcamp Graduate',
     image: 'https://notion-avatars.netlify.app/api/avatar?preset=male-6',
-    quote: 'As a non-technical founder, this platform gave me the confidence to build our MVP quickly.',
+    quote: 'Codexa bridged the gap between bootcamp theory and real-world performance optimization. It prepared me for senior-level technical discussions.',
   },
 ]
 
@@ -101,10 +101,10 @@ export function TestimonialsSection() {
         <div className="mx-auto max-w-2xl text-center mb-16">
           <Badge variant="outline" className="mb-4">Testimonials</Badge>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-            Empowering Innovation Worldwide
+            Transforming programmers worldwide
           </h2>
           <p className="text-lg text-muted-foreground">
-            Join thousands of developers and teams who trust our platform to build exceptional digital experiences.
+            Join thousands of developers who use Codexa to elevate their coding skills through AI-powered insights and community learning.
           </p>
         </div>
 

@@ -14,39 +14,39 @@ type FaqItem = {
 const faqItems: FaqItem[] = [
   {
     value: 'item-1',
-    question: 'How do I integrate Codexa components into my project?',
+    question: 'How does Codexa\'s AI analysis work?',
     answer:
-      'Integration is simple! All our components are built with codexa/ui and work with React, Next.js, and Vite. Just copy the component code, install any required dependencies, and paste it into your project. Each component comes with detailed installation instructions and examples.',
+      'Our AI analyzes your code beyond correctness, evaluating time and space complexity, detecting inefficiency patterns, and simulating performance at scale. It provides detailed insights on algorithmic behavior, optimization opportunities, and performance predictions in clear, human-friendly language.',
   },
   {
     value: 'item-2',
-    question: 'What\'s the difference between free and premium components?',
+    question: 'What makes Codexa different from other coding platforms?',
     answer:
-      'Free components include essential UI elements like buttons, forms, and basic layouts. Premium components offer advanced features like complex data tables, analytics dashboards, authentication flows, and complete admin templates. Premium also includes Figma files, priority support, and commercial licenses.',
+      'Unlike traditional platforms that only check if your solution works, Codexa evaluates performance, scalability, and efficiency. Our AI mentor provides personalized guidance, explains optimization strategies, and helps you develop performance-aware thinking rather than just problem-solving skills.',
   },
   {
     value: 'item-3',
-    question: 'Can I use these components in commercial projects?',
+    question: 'Do I need prior competitive programming experience?',
     answer:
-      'Yes! Free components come with an MIT license for unlimited use. Premium components include a commercial license that allows usage in client projects, SaaS applications, and commercial products without attribution requirements.',
+      'Not at all! Codexa adapts to your skill level with personalized learning paths. Whether you\'re a beginner learning algorithms or an experienced programmer optimizing performance, our AI mentor provides appropriate guidance and gradually increases complexity as you improve.',
   },
   {
     value: 'item-4',
-    question: 'Do you provide support and updates?',
+    question: 'How does the community and contest system work?',
     answer:
-      'Absolutely! We provide community support for free components through our Discord server and GitHub issues. Premium subscribers get priority email support, regular component updates, and early access to new releases. We also maintain compatibility with the latest codexa/ui versions.',
+      'You can connect with friends, compare solutions, analyze performance differences, and participate in coding contests. Our platform encourages collaborative learning where you can learn from diverse approaches, track your progress against peers, and grow together in a supportive environment.',
   },
   {
     value: 'item-5',
-    question: 'What frameworks and tools do you support?',
+    question: 'What programming languages does Codexa support?',
     answer:
-      'Our components work with React 18+, Next.js 13+, and Vite. We use TypeScript, Tailwind CSS, and follow codexa/ui conventions. Components are tested with popular tools like React Hook Form, TanStack Query, and Zustand for state management.',
+      'Codexa supports all major programming languages including Python, Java, C++, JavaScript, C#, and more. Our AI analysis works consistently across languages, focusing on algorithmic complexity and optimization patterns rather than language-specific syntax.',
   },
   {
     value: 'item-6',
-    question: 'How often do you release new components?',
+    question: 'How does the AI mentor provide personalized learning?',
     answer:
-      'We release new components and templates weekly. Premium subscribers get early access to new releases, while free components are updated regularly based on community feedback. You can track our roadmap and request specific components through our GitHub repository.',
+      'The AI tracks your progress across different topics, identifies strengths and weaknesses, analyzes your problem-solving patterns, and generates customized learning paths. It provides hints, alternative approaches, and optimized strategies tailored to your current skill level and learning pace.',
   },
 ]
 
@@ -61,7 +61,7 @@ const FaqSection = () => {
             Frequently Asked Questions
           </h2>
           <p className="text-lg text-muted-foreground">
-            Everything you need to know about Codexa components, licensing, and integration. Still have questions? We're here to help!
+            Everything you need to know about Codexa's AI-powered coding platform and learning experience. Still have questions? We're here to help!
           </p>
         </div>
 

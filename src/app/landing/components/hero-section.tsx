@@ -8,7 +8,7 @@ import { assetUrl, getAppUrl } from "@/lib/utils"
 
 export function HeroSection() {
   return (
-    <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-background to-background/80 pt-16 sm:pt-20 pb-16">
+    <section id="hero" className="relative overflow-hidden bg-linear-to-b from-background to-background/80 pt-16 sm:pt-20 pb-16">
       {/* Background Pattern */}
       <div className="absolute inset-0">
         {/* Dot pattern overlay using reusable component */}
@@ -21,38 +21,38 @@ export function HeroSection() {
           <div className="mb-8 flex justify-center">
             <Badge variant="outline" className="px-4 py-2 border-foreground">
               <Star className="w-3 h-3 mr-2 fill-current" />
-              New: Premium Template Collection
+              New: AI-Powered Code Analysis
               <ArrowRight className="w-3 h-3 ml-2" />
             </Badge>
           </div>
 
           {/* Main Headline */}
           <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-            Build Better
-            <span className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              {" "}Web Applications{" "}
+            Master Programming
+            <span className="bg-linear-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              {" "}with AI{" "}
             </span>
-            with Ready-Made Components
+            Performance Analysis
           </h1>
 
           {/* Subheading */}
           <p className="mx-auto mb-10 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-            Accelerate your development with our curated collection of blocks, templates, landing pages,
-            and admin dashboards. From free components to complete solutions, built with codexa/ui.
+            Transform how you learn and practice coding with Codexa's intelligent platform.
+            Get AI-powered insights on complexity, efficiency, and performance to become a better programmer.
           </p>
 
           {/* CTA Buttons */}
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
             <Button size="lg" className="text-base cursor-pointer" asChild>
               <a href={getAppUrl("/auth/sign-up")}>
-                Get Started Free
+                Start Coding Now
                 <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
             <Button variant="outline" size="lg" className="text-base cursor-pointer" asChild>
               <a href="#">
                 <Play className="mr-2 h-4 w-4" />
-                Watch Demo
+                See AI Analysis
               </a>
             </Button>
           </div>
@@ -80,7 +80,7 @@ export function HeroSection() {
               />
 
               {/* Bottom fade effect - gradient overlay that fades the image to background */}
-              <div className="absolute bottom-0 left-0 w-full h-32 md:h-40 lg:h-48 bg-gradient-to-b from-background/0 via-background/70 to-background rounded-b-xl"></div>
+              <div className="absolute bottom-0 left-0 w-full h-32 md:h-40 lg:h-48 bg-linear-to-b from-background/0 via-background/70 to-background rounded-b-xl"></div>
 
               {/* Overlay play button for demo */}
               <div className="absolute inset-0 flex items-center justify-center">
