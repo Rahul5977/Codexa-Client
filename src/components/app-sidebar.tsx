@@ -89,11 +89,6 @@ const data = {
       label: "Pages",
       items: [
         {
-          title: "Landing",
-          url: "/landing",
-          icon: LayoutTemplate,
-        },
-        {
           title: "Errors",
           url: "#",
           icon: AlertTriangle,
@@ -134,10 +129,6 @@ const data = {
               url: "/settings/account",
             },
             {
-              title: "Plans & Billing",
-              url: "/settings/billing",
-            },
-            {
               title: "Appearance",
               url: "/settings/appearance",
             },
@@ -155,11 +146,6 @@ const data = {
           title: "FAQs",
           url: "/faqs",
           icon: HelpCircle,
-        },
-        {
-          title: "Pricing",
-          url: "/pricing",
-          icon: CreditCard,
         },
       ],
     },

@@ -12,7 +12,6 @@ const Chat = lazy(() => import('@/app/chat/page'))
 const Calendar = lazy(() => import('@/app/calendar/page'))
 const Users = lazy(() => import('@/app/users/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
-const Pricing = lazy(() => import('@/app/pricing/page'))
 
 // Auth pages
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
@@ -29,7 +28,6 @@ const UnderMaintenance = lazy(() => import('@/app/errors/under-maintenance/page'
 // Settings pages
 const UserSettings = lazy(() => import('@/app/settings/user/page'))
 const AccountSettings = lazy(() => import('@/app/settings/account/page'))
-const BillingSettings = lazy(() => import('@/app/settings/billing/page'))
 const AppearanceSettings = lazy(() => import('@/app/settings/appearance/page'))
 const NotificationSettings = lazy(() => import('@/app/settings/notifications/page'))
 const ConnectionSettings = lazy(() => import('@/app/settings/connections/page'))
@@ -90,10 +88,6 @@ export const routes: RouteConfig[] = [
     path: "/faqs",
     element: <FAQs />
   },
-  {
-    path: "/pricing",
-    element: <Pricing />
-  },
 
   // Authentication Routes
   {
@@ -139,10 +133,6 @@ export const routes: RouteConfig[] = [
   {
     path: "/settings/account",
     element: <ProtectedRoute><AccountSettings /></ProtectedRoute>
-  },
-  {
-    path: "/settings/billing",
-    element: <ProtectedRoute><BillingSettings /></ProtectedRoute>
   },
   {
     path: "/settings/appearance",
