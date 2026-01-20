@@ -53,7 +53,6 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { schema } from "../app/dashboard/schemas/task-schema"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -106,6 +105,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import type { schema } from "@/components/schemas/task-schema"
 
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: number }) {
