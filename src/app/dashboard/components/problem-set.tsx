@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,46 +8,50 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { CheckCircle2, XCircle, AlertCircle, Search, Code2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
+import { CheckCircle2, XCircle, AlertCircle, Search, Code2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-// Import data and schemas
-import { problemsData, categories, difficulties, statuses } from "../data/problems-data"
-import { type Problem } from "../schemas/problem-schema"
+// Import API hooks and types
+import { useProblems } from "@/hooks/api/use-dashboard"
+import { type Problem } from "@/api/types/dashboard"
+
+// Filter options
+const categories = ["All", "Array", "String", "Linked List", "Math", "Dynamic Programming", "Tree", "Graph", "Hash Table"]
+const difficulties = ["All", "Easy", "Medium", "Hard"]
+const statuses = ["All", "Solved", "Attempted", "Unsolved"]
 
 export function ProblemSet() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedDifficulty, setSelectedDifficulty] = useState("All")
   const [selectedStatus, setSelectedStatus] = useState("All")
-  const [currentPage, setCurrentPage] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  const filteredProblems = problemsData.filter((problem: Problem) => {
-    const matchesSearch = problem.title.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "All" || problem.category === selectedCategory
-    const matchesDifficulty = selectedDifficulty === "All" || problem.difficulty === selectedDifficulty
-    const matchesStatus = selectedStatus === "All" || problem.status === selectedStatus.toLowerCase()
-    
-    return matchesSearch && matchesCategory && matchesDifficulty && matchesStatus
+  // API call with parameters
+  const { 
+    data: problems, 
+    loading, 
+    error,
+    totalCount,
+    totalPages,
+    refetch 
+  } = useProblems({
+    page: currentPage,
+    pageSize,
+    search: searchTerm || undefined,
+    category: selectedCategory !== "All" ? selectedCategory : undefined,
+    difficulty: selectedDifficulty !== "All" ? selectedDifficulty : undefined,
+    status: selectedStatus !== "All" ? selectedStatus.toLowerCase() : undefined
   })
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredProblems.length / pageSize)
-  const startIndex = currentPage * pageSize
-  const endIndex = startIndex + pageSize
-  const paginatedProblems = filteredProblems.slice(startIndex, endIndex)
-
-  // Pagination handlers
-  const goToFirstPage = () => setCurrentPage(0)
-  const goToPreviousPage = () => setCurrentPage(Math.max(0, currentPage - 1))
-  const goToNextPage = () => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))
-  const goToLastPage = () => setCurrentPage(totalPages - 1)
-  const canGoToPrevious = currentPage > 0
-  const canGoToNext = currentPage < totalPages - 1
-
   // Reset to first page when filters change
-  const resetToFirstPage = () => setCurrentPage(0)
+  const resetToFirstPage = () => setCurrentPage(1)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedCategory, selectedDifficulty, selectedStatus])
 
   const getDifficultyBadge = (difficulty: Problem['difficulty']) => {
     const variants = {
@@ -71,12 +75,57 @@ export function ProblemSet() {
     }
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Code2 className="h-5 w-5" />
+            Loading Problems...
+          </CardTitle>
+          <CardDescription>
+            Fetching coding problems from the server
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Code2 className="h-5 w-5" />
+            Error Loading Problems
+          </CardTitle>
+          <CardDescription>
+            There was an error fetching the problems
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-red-500 mb-4">{error}</p>
+            <Button onClick={() => refetch()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Code2 className="h-5 w-5" />
-          Problem Set ({filteredProblems.length} problems)
+          Problem Set ({totalCount} problems)
         </CardTitle>
         <CardDescription>
           Practice coding problems and improve your algorithmic skills
@@ -157,7 +206,7 @@ export function ProblemSet() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedProblems.map((problem: Problem) => (
+              {problems?.map((problem: Problem) => (
                 <TableRow key={problem.id} className="hover:bg-muted/30">
                   <TableCell>
                     {getStatusIcon(problem.status)}
@@ -188,8 +237,9 @@ export function ProblemSet() {
         {/* Pagination Controls */}
         <div className="flex items-center justify-between px-4 mt-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredProblems.length)} of{" "}
-            {filteredProblems.length} problem(s).
+            Showing {((currentPage - 1) * pageSize) + 1} to{" "}
+            {Math.min(currentPage * pageSize, totalCount)} of{" "}
+            {totalCount} problem(s).
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
@@ -200,7 +250,7 @@ export function ProblemSet() {
                 value={`${pageSize}`}
                 onValueChange={(value) => {
                   setPageSize(Number(value))
-                  setCurrentPage(0)
+                  setCurrentPage(1)
                 }}
               >
                 <SelectTrigger size="sm" className="w-20 cursor-pointer" id="rows-per-page">
@@ -216,14 +266,14 @@ export function ProblemSet() {
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {currentPage + 1} of {totalPages}
+              Page {currentPage} of {totalPages}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">
               <Button
                 variant="outline"
                 className="hidden h-8 w-8 p-0 lg:flex cursor-pointer"
-                onClick={goToFirstPage}
-                disabled={!canGoToPrevious}
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage <= 1}
               >
                 <span className="sr-only">Go to first page</span>
                 <ChevronsLeft className="h-4 w-4" />
@@ -232,8 +282,8 @@ export function ProblemSet() {
                 variant="outline"
                 className="size-8 cursor-pointer"
                 size="icon"
-                onClick={goToPreviousPage}
-                disabled={!canGoToPrevious}
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage <= 1}
               >
                 <span className="sr-only">Go to previous page</span>
                 <ChevronLeft className="h-4 w-4" />
@@ -242,8 +292,8 @@ export function ProblemSet() {
                 variant="outline"
                 className="size-8 cursor-pointer"
                 size="icon"
-                onClick={goToNextPage}
-                disabled={!canGoToNext}
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={currentPage >= totalPages}
               >
                 <span className="sr-only">Go to next page</span>
                 <ChevronRight className="h-4 w-4" />
@@ -252,8 +302,8 @@ export function ProblemSet() {
                 variant="outline"
                 className="hidden size-8 lg:flex cursor-pointer"
                 size="icon"
-                onClick={goToLastPage}
-                disabled={!canGoToNext}
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages}
               >
                 <span className="sr-only">Go to last page</span>
                 <ChevronsRight className="h-4 w-4" />
@@ -262,7 +312,7 @@ export function ProblemSet() {
           </div>
         </div>
         
-        {filteredProblems.length === 0 && (
+        {!problems || problems.length === 0 && totalCount === 0 && (
           <div className="text-center py-8">
             <div className="text-muted-foreground mb-4">
               <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -272,7 +322,7 @@ export function ProblemSet() {
           </div>
         )}
         
-        {paginatedProblems.length === 0 && filteredProblems.length > 0 && (
+        {problems && problems.length === 0 && totalCount > 0 && (
           <div className="text-center py-8">
             <div className="text-muted-foreground mb-4">
               <h3 className="text-lg font-medium">No problems on this page</h3>

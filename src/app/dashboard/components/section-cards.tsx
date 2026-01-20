@@ -1,4 +1,4 @@
-import { TrendingUp, Code2, Target, Zap, Brain } from "lucide-react"
+import { TrendingUp, Code2, Target, Zap, Brain, Loader2 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import {
@@ -9,8 +9,46 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useDashboardStats } from "@/hooks/api/use-dashboard"
 
 export function SectionCards() {
+  const { data: stats, loading, error } = useDashboardStats()
+
+  if (loading) {
+    return (
+      <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} className="@container/card">
+            <CardHeader>
+              <CardDescription>Loading...</CardDescription>
+              <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl flex items-center gap-2">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                --
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="@container/card col-span-full">
+          <CardHeader>
+            <CardDescription className="text-red-500">Error loading dashboard stats</CardDescription>
+            <CardTitle className="text-sm text-muted-foreground">{error}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!stats) {
+    return null
+  }
+
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-linear-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Card className="@container/card">
@@ -18,21 +56,21 @@ export function SectionCards() {
           <CardDescription>Problems Solved</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl flex items-center gap-2">
             <Code2 className="h-6 w-6 text-primary" />
-            23
+            {stats.solvedProblems}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUp />
-              +5 this week
+              {stats.acceptanceRate}% acceptance
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Great progress this week <TrendingUp className="size-4" />
+            {stats.solvedProblems} of {stats.totalProblems} problems <TrendingUp className="size-4" />
           </div>
           <div className="text-muted-foreground">
-            8 Easy, 12 Medium, 3 Hard
+            {stats.attemptedProblems} attempted problems
           </div>
         </CardFooter>
       </Card>
@@ -40,7 +78,7 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Current Streak</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl flex items-center gap-2">
-            🔥 7 days
+            🔥 {stats.currentStreak} days
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -51,10 +89,10 @@ export function SectionCards() {
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Keep the momentum going <Target className="size-4" />
+            Longest: {stats.longestStreak} days <Target className="size-4" />
           </div>
           <div className="text-muted-foreground">
-            Longest streak: 15 days
+            Keep solving to maintain streak!
           </div>
         </CardFooter>
       </Card>
@@ -62,42 +100,46 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Contest Rating</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl flex items-center gap-2">
-            <Brain className="h-6 w-6 text-yellow-500" />
-            1,847
+            <Zap className="h-6 w-6 text-yellow-500" />
+            {stats.contestRating}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUp />
-              +127
+              Rank #{stats.rankPosition.toLocaleString()}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Specialist rank achieved <TrendingUp className="size-4" />
+            Competitive Programming Rating <Zap className="size-4" />
           </div>
-          <div className="text-muted-foreground">Global rank: #2,345</div>
+          <div className="text-muted-foreground">
+            Top performer in contests
+          </div>
         </CardFooter>
       </Card>
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>AI Analysis Score</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl flex items-center gap-2">
-            <Zap className="h-6 w-6 text-blue-500" />
-            92%
+            <Brain className="h-6 w-6 text-purple-500" />
+            {stats.aiAnalysisScore}/100
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUp />
-              +8.5%
+              Improving
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Excellent code quality <TrendingUp className="size-4" />
+            Code quality analysis <Brain className="size-4" />
           </div>
-          <div className="text-muted-foreground">Avg complexity: O(n log n)</div>
+          <div className="text-muted-foreground">
+            Based on solution patterns
+          </div>
         </CardFooter>
       </Card>
     </div>
