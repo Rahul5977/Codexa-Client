@@ -21,9 +21,27 @@ interface BaseLayoutProps {
 export function BaseLayout({ children, title, description }: BaseLayoutProps) {
   const [themeCustomizerOpen, setThemeCustomizerOpen] = React.useState(false)
   const { config } = useSidebarConfig()
+  const [sidebarOpen, setSidebarOpen] = React.useState(() => {
+    // If it's floating variant with icon collapsible, start collapsed to showcase hover
+    if (config.variant === "floating" && config.collapsible === "icon") {
+      return false
+    }
+    return true
+  })
+
+  // Update sidebar state when configuration changes
+  React.useEffect(() => {
+    if (config.variant === "floating" && config.collapsible === "icon") {
+      setSidebarOpen(false)
+    } else {
+      setSidebarOpen(true)
+    }
+  }, [config.variant, config.collapsible])
 
   return (
     <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={setSidebarOpen}
       style={
         {
           "--sidebar-width": "16rem",
