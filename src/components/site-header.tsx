@@ -38,32 +38,12 @@ export function SiteHeader() {
           <div className="ml-auto flex items-center gap-2">
             <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
               <a
-                href="https://codexastore.com/blocks"
-                rel="noopener noreferrer"
-
-                className="dark:text-foreground"
-              >
-                Blocks
-              </a>
-            </Button>
-            <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-              <a
                 href={getAppUrl("/landing")}
                 rel="noopener noreferrer"
 
                 className="dark:text-foreground"
               >
                 Landing Page
-              </a>
-            </Button>
-            <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-              <a
-                href="https://github.com/silicondeck/codexa-dashboard-landing-template"
-                rel="noopener noreferrer"
-
-                className="dark:text-foreground"
-              >
-                GitHub
               </a>
             </Button>
             <ModeToggle />

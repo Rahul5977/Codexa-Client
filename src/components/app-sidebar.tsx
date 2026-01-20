@@ -8,7 +8,6 @@ import {
   CheckSquare,
   MessageCircle,
   Calendar,
-  // Shield,
   AlertTriangle,
   Settings,
   HelpCircle,
@@ -16,7 +15,6 @@ import {
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Logo } from "@/components/logo"
-// import { SidebarNotification } from "@/components/sidebar-notification"
 import { useAuth } from "@/contexts/auth-context"
 
 import { NavMain } from "@/components/nav-main"
@@ -129,10 +127,6 @@ const data = {
             {
               title: "Appearance",
               url: "/settings/appearance",
-            },
-            {
-              title: "Notifications",
-              url: "/settings/notifications",
             },
             {
               title: "Connections",
