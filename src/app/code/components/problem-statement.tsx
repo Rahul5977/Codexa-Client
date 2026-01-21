@@ -186,7 +186,7 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
           </TabsList>
         </div>
 
-        <TabsContent value="description" className="flex-1 m-0 overflow-hidden flex flex-col">
+        <TabsContent value="description" className="flex-1 m-0 flex flex-col overflow-y-auto">
           {/* Problem Header */}
           <div className="p-3 border-b border-border/50">
             <div className="flex items-start justify-between mb-2">
@@ -281,7 +281,7 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
           </ScrollArea>
         </TabsContent>
 
-        <TabsContent value="submissions" className="flex-1 m-0">
+        <TabsContent value="submissions" className="flex-1 m-0 overflow-y-auto">
           <ScrollArea className="h-full">
             <div className="p-3">
               <div className="space-y-3 overflow-x-auto">

@@ -128,7 +128,7 @@ export default function CodePage() {
                 </div>
               ) : (
                 // Normal view with content
-                <div className={cn("h-full", leftPanelSize < 30 && "overflow-y-auto")}>
+                <div className="h-full overflow-hidden">
                   <ProblemStatement
                     problem={selectedProblem}
                     loading={loading}
@@ -237,14 +237,14 @@ export default function CodePage() {
                     </div>
                   </div>
 
-                  <TabsContent value="code" className={cn("flex-1 m-0", rightPanelSize < 30 ? "overflow-auto" : "overflow-hidden")}>
+                  <TabsContent value="code" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
                     <CodeEditor
                       problem={selectedProblem}
                       loading={loading}
                     />
                   </TabsContent>
 
-                  <TabsContent value="testcases" className={cn("flex-1 m-0", rightPanelSize < 30 ? "overflow-auto" : "overflow-hidden")}>
+                  <TabsContent value="testcases" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
                     <TestCases
                       problem={selectedProblem}
                       loading={loading}

@@ -102,7 +102,7 @@ export function TestCases({ loading }: TestCasesProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background overflow-y-auto">
 
       {/* Content */}
       <div className="flex-1 bg-linear-to-b from-transparent to-muted/5">
