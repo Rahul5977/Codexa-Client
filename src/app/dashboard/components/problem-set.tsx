@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,12 +22,18 @@ const difficulties = ["All", "Easy", "Medium", "Hard"]
 const statuses = ["All", "Solved", "Attempted", "Unsolved"]
 
 export function ProblemSet() {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [selectedDifficulty, setSelectedDifficulty] = useState("All")
   const [selectedStatus, setSelectedStatus] = useState("All")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  // Navigation handler for problem selection
+  const handleProblemClick = (problemId: number) => {
+    navigate(`/code?id=${problemId}`)
+  }
 
   // API call with parameters
   const { 
@@ -213,7 +220,10 @@ export function ProblemSet() {
                   </TableCell>
                   <TableCell className="font-medium">{problem.id}</TableCell>
                   <TableCell>
-                    <button className="text-left hover:text-primary transition-colors font-medium">
+                    <button 
+                      className="text-left hover:text-primary transition-colors font-medium"
+                      onClick={() => handleProblemClick(problem.id)}
+                    >
                       {problem.title}
                     </button>
                   </TableCell>
@@ -224,7 +234,11 @@ export function ProblemSet() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{problem.acceptance}</TableCell>
                   <TableCell>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleProblemClick(problem.id)}
+                    >
                       {problem.status === 'solved' ? 'View' : 'Solve'}
                     </Button>
                   </TableCell>

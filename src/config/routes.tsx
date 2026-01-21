@@ -12,6 +12,7 @@ const Chat = lazy(() => import('@/app/chat/page'))
 const Calendar = lazy(() => import('@/app/calendar/page'))
 const Users = lazy(() => import('@/app/users/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
+const CodePage = lazy(() => import('@/app/code/page'))
 
 // Auth pages
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
@@ -76,6 +77,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/calendar",
     element: <ProtectedRoute><Calendar /></ProtectedRoute>
+  },
+  {
+    path: "/code",
+    element: <ProtectedRoute><CodePage /></ProtectedRoute>
   },
 
   // Content Pages
