@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
+import Editor from "@monaco-editor/react"
+import { useTheme } from "@/hooks/use-theme"
 import {
   RotateCcw,
   Copy,
-  Check
+  Check,
 } from "lucide-react"
 import { type Problem } from "@/api/types/dashboard"
 
@@ -19,14 +21,14 @@ interface CodeEditorProps {
 }
 
 const LANGUAGES = [
-  { value: "javascript", label: "JavaScript", extension: "js" },
-  { value: "typescript", label: "TypeScript", extension: "ts" },
-  { value: "python", label: "Python", extension: "py" },
-  { value: "java", label: "Java", extension: "java" },
-  { value: "cpp", label: "C++", extension: "cpp" },
-  { value: "c", label: "C", extension: "c" },
-  { value: "go", label: "Go", extension: "go" },
-  { value: "rust", label: "Rust", extension: "rs" }
+  { value: "javascript", label: "JavaScript", extension: "js", monaco: "javascript" },
+  { value: "typescript", label: "TypeScript", extension: "ts", monaco: "typescript" },
+  { value: "python", label: "Python", extension: "py", monaco: "python" },
+  { value: "java", label: "Java", extension: "java", monaco: "java" },
+  { value: "cpp", label: "C++", extension: "cpp", monaco: "cpp" },
+  { value: "c", label: "C", extension: "c", monaco: "c" },
+  { value: "go", label: "Go", extension: "go", monaco: "go" },
+  { value: "rust", label: "Rust", extension: "rs", monaco: "rust" }
 ]
 
 const DEFAULT_CODE_TEMPLATES = {
@@ -53,9 +55,48 @@ public:
 }
 
 export function CodeEditor({ loading }: CodeEditorProps) {
+  const { theme } = useTheme()
   const [selectedLanguage, setSelectedLanguage] = useState("javascript")
   const [code, setCode] = useState(DEFAULT_CODE_TEMPLATES.javascript)
   const [copied, setCopied] = useState(false)
+  const [editorTheme, setEditorTheme] = useState<string>("vs-dark")
+
+  // Update Monaco theme based on system theme
+  useEffect(() => {
+    const updateEditorTheme = () => {
+      const root = window.document.documentElement
+      
+      // Check if theme is system, then check actual system preference
+      if (theme === 'system') {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        setEditorTheme(systemPrefersDark ? 'vs-dark' : 'vs')
+      } else {
+        // For explicit light/dark theme
+        const isDark = theme === 'dark' || root.classList.contains('dark')
+        setEditorTheme(isDark ? 'vs-dark' : 'vs')
+      }
+    }
+
+    updateEditorTheme()
+
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const handleChange = () => updateEditorTheme()
+    
+    mediaQuery.addEventListener('change', handleChange)
+    
+    // Also observe DOM changes for theme class updates
+    const observer = new MutationObserver(updateEditorTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleChange)
+      observer.disconnect()
+    }
+  }, [theme])
 
   const handleLanguageChange = useCallback((language: string) => {
     setSelectedLanguage(language)
@@ -98,50 +139,125 @@ export function CodeEditor({ loading }: CodeEditorProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-linear-to-br from-background via-background to-muted/20">
       {/* Code Editor Area */}
-      <div className="flex-1 p-3 overflow-hidden bg-linear-to-b from-transparent to-muted/5">
-        <Card className="h-full flex flex-col shadow-sm border-border/50 bg-linear-to-br from-muted/10 to-background py-3">
-          <div className="flex items-center justify-between px-3 pb-3 border-b border-border/50">
-            {/* Language Selector - Left Side */}
-            <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
-              <SelectTrigger className="w-32 h-8 text-xs border-border/50 bg-background/50">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      <div className="flex-1 px-3 py-1 overflow-hidden">
+        <Card className="h-full flex flex-col border border-border/60 bg-linear-to-br from-card/95 via-card to-muted/30 overflow-hidden p-0 gap-0">
+          {/* Enhanced Toolbar */}
+          <div className="flex items-center justify-between p-2 border-b border-border/60 bg-linear-to-r from-muted/40 via-muted/20 to-transparent">
+            <div className="flex items-center gap-3">
+              
+              {/* Language Selector */}
+              <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+                <SelectTrigger className="text-sm font-medium border-border/60 bg-background/80 hover:bg-background hover:border-primary/40 transition-all shadow-sm">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.value} value={lang.value} className="font-medium">
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {/* Editor Actions - Right Side */}
+              <Badge variant="outline" className="text-xs px-2.5 py-1 font-medium border-border/50">
+                {code.split('\n').length} lines
+              </Badge>
+            </div>
+
+            {/* Editor Actions */}
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleCopy} className="h-8 px-2 border-border/50 hover:bg-primary/10 hover:border-primary/30">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopy} 
+                className="px-3 border-border/60 hover:bg-green-500/10 hover:border-green-500/40 hover:text-green-600 dark:hover:text-green-400 transition-all shadow-sm"
+              >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-green-600" />
+                  <>
+                    <Check className="h-4 w-4 mr-1.5 text-green-600 dark:text-green-400" />
+                    <span className="text-xs font-medium">Copied!</span>
+                  </>
                 ) : (
-                  <Copy className="h-3.5 w-3.5" />
+                  <>
+                    <Copy className="h-4 w-4" />
+                  </>
                 )}
               </Button>
-
-              <Button variant="outline" size="sm" onClick={handleReset} className="h-8 px-2 border-border/50 hover:bg-primary/10 hover:border-primary/30">
-                <RotateCcw className="h-3.5 w-3.5" />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleReset} 
+                className="h-9 px-3 border-border/60 hover:bg-orange-500/10 hover:border-orange-500/40 hover:text-orange-600 dark:hover:text-orange-400 transition-all shadow-sm"
+              >
+                <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
           </div>
-          <div className="flex-1 overflow-hidden px-2">
-            <Textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="// Write your solution here...\n// Happy coding!"
-              className="h-full resize-none font-mono text-sm leading-6 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 overflow-y-auto bg-transparent placeholder:text-muted-foreground/50 p-2"
-              style={{
-                fontFamily: '"Fira Code", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace'
-              }}
-            />
+
+          {/* Monaco Editor */}
+          <div className="flex-1 overflow-hidden relative">
+            <div className="absolute inset-0">
+              <Editor
+                height="100%"
+                language={LANGUAGES.find(lang => lang.value === selectedLanguage)?.monaco || "javascript"}
+                value={code}
+                onChange={(value) => setCode(value || "")}
+                theme={editorTheme}
+                options={{
+                  minimap: { enabled: true, scale: 1 },
+                  fontSize: 15,
+                  lineNumbers: "on",
+                  roundedSelection: true,
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  tabSize: 2,
+                  wordWrap: "off",
+                  padding: { top: 20, bottom: 20 },
+                  suggestOnTriggerCharacters: true,
+                  quickSuggestions: {
+                    other: true,
+                    comments: true,
+                    strings: true
+                  },
+                  bracketPairColorization: {
+                    enabled: true
+                  },
+                  guides: {
+                    bracketPairs: true,
+                    indentation: true
+                  },
+                  cursorBlinking: "smooth",
+                  cursorSmoothCaretAnimation: "on",
+                  smoothScrolling: true,
+                  fontFamily: '"Fira Code", "Cascadia Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace',
+                  fontLigatures: true,
+                  lineHeight: 1.6,
+                  scrollbar: {
+                    vertical: "visible",
+                    horizontal: "visible",
+                    useShadows: true,
+                    verticalScrollbarSize: 12,
+                    horizontalScrollbarSize: 12,
+                    scrollByPage: false
+                  },
+                  overviewRulerBorder: false,
+                  renderLineHighlight: "all",
+                  renderWhitespace: "selection",
+                  formatOnPaste: true,
+                  formatOnType: true
+                }}
+                loading={
+                  <div className="flex items-center justify-center h-full bg-muted/20">
+                    <div className="text-center space-y-3">
+                      <Skeleton className="h-12 w-12 rounded-full mx-auto" />
+                      <Skeleton className="h-4 w-32 mx-auto" />
+                    </div>
+                  </div>
+                }
+              />
+            </div>
           </div>
         </Card>
       </div>
