@@ -15,6 +15,8 @@ interface ProblemStatementProps {
   problem: Problem | null
   loading: boolean
   error: string | null
+  activeTab?: "description" | "submissions"
+  onTabChange?: (tab: "description" | "submissions") => void
 }
 
 interface Submission {
@@ -61,8 +63,19 @@ const SAMPLE_SUBMISSIONS: Submission[] = [
   }
 ]
 
-export function ProblemStatement({ problem, loading, error }: ProblemStatementProps) {
-  const [activeTab, setActiveTab] = useState("description")
+export function ProblemStatement({ problem, loading, error, activeTab: externalActiveTab, onTabChange }: ProblemStatementProps) {
+  const [internalActiveTab, setInternalActiveTab] = useState("description")
+  
+  // Use external tab if provided, otherwise use internal
+  const activeTab = externalActiveTab || internalActiveTab
+  const handleTabChange = (value: string) => {
+    const tab = value as "description" | "submissions"
+    if (onTabChange) {
+      onTabChange(tab)
+    } else {
+      setInternalActiveTab(tab)
+    }
+  }
 
   if (loading) {
     return (
@@ -159,7 +172,7 @@ export function ProblemStatement({ problem, loading, error }: ProblemStatementPr
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
         <div className="border-b border-border/50 bg-linear-to-r from-muted/30 to-muted/10 p-2 shadow-sm">
           <TabsList className="h-11 bg-transparent">
             <TabsTrigger value="description" className="gap-2">

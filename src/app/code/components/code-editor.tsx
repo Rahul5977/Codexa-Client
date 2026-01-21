@@ -141,7 +141,7 @@ export function CodeEditor({ loading }: CodeEditorProps) {
   return (
     <div className="h-full flex flex-col bg-linear-to-br from-background via-background to-muted/20">
       {/* Code Editor Area */}
-      <div className="flex-1 px-3 py-1 overflow-hidden">
+      <div className="flex-1 px-3 py-1 pb-2 overflow-hidden">
         <Card className="h-full flex flex-col border border-border/60 bg-linear-to-br from-card/95 via-card to-muted/30 overflow-hidden p-0 gap-0">
           {/* Enhanced Toolbar */}
           <div className="flex items-center justify-between p-2 border-b border-border/60 bg-linear-to-r from-muted/40 via-muted/20 to-transparent">
