@@ -1,12 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
-
-interface User {
-    id: string
-    email: string
-    name: string
-    role?: string
-}
+import { authService, type User } from '@/api/services/auth'
+import { apiClient } from '@/api/client'
 
 interface AuthContextType {
     user: User | null
@@ -14,7 +9,8 @@ interface AuthContextType {
     isLoading: boolean
     login: (email: string, password: string) => Promise<boolean>
     logout: () => void
-    signup: (email: string, password: string, name: string) => Promise<boolean>
+    signup: (name: string, email: string, password: string, otp: string) => Promise<boolean>
+    sendVerificationOTP: (email: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -34,50 +30,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         checkAuthStatus()
     }, [])
 
-    const checkAuthStatus = () => {
+    const checkAuthStatus = async () => {
         try {
             const savedUser = localStorage.getItem('user')
-            const token = localStorage.getItem('token')
+            const accessToken = localStorage.getItem('accessToken')
+            const refreshToken = localStorage.getItem('refreshToken')
 
-            if (savedUser && token) {
+            if (savedUser && accessToken) {
                 setUser(JSON.parse(savedUser))
+                apiClient.setAuthToken(accessToken)
+                
+                // Optionally verify token is still valid by fetching user
+                try {
+                    const currentUser = await authService.me()
+                    setUser(currentUser)
+                    localStorage.setItem('user', JSON.stringify(currentUser))
+                } catch (error) {
+                    // Token might be expired, try to refresh
+                    if (refreshToken) {
+                        try {
+                            const { accessToken: newAccessToken } = await authService.refreshToken(refreshToken)
+                            apiClient.setAuthToken(newAccessToken)
+                            localStorage.setItem('accessToken', newAccessToken)
+                            
+                            const currentUser = await authService.me()
+                            setUser(currentUser)
+                            localStorage.setItem('user', JSON.stringify(currentUser))
+                        } catch (refreshError) {
+                            // Refresh failed, clear auth
+                            clearAuth()
+                        }
+                    } else {
+                        clearAuth()
+                    }
+                }
             }
         } catch (error) {
             console.error('Error checking auth status:', error)
-            // Clear invalid data
-            localStorage.removeItem('user')
-            localStorage.removeItem('token')
+            clearAuth()
         } finally {
             setIsLoading(false)
         }
+    }
+
+    const clearAuth = () => {
+        setUser(null)
+        apiClient.clearAuthToken()
+        localStorage.removeItem('user')
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
     }
 
     const login = async (email: string, password: string): Promise<boolean> => {
         try {
             setIsLoading(true)
 
-            // Simulate API call - replace with your actual authentication logic
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await authService.login(email, password)
+            
+            setUser(response.user)
+            apiClient.setAuthToken(response.tokens.accessToken)
+            
+            localStorage.setItem('user', JSON.stringify(response.user))
+            localStorage.setItem('accessToken', response.tokens.accessToken)
+            localStorage.setItem('refreshToken', response.tokens.refreshToken)
 
-            // Mock authentication - replace with real API call
-            if (email && password) {
-                const mockUser: User = {
-                    id: '1',
-                    email,
-                    name: email.split('@')[0],
-                    role: 'user'
-                }
-
-                const mockToken = 'mock-jwt-token-' + Date.now()
-
-                setUser(mockUser)
-                localStorage.setItem('user', JSON.stringify(mockUser))
-                localStorage.setItem('token', mockToken)
-
-                return true
-            }
-
-            return false
+            return true
         } catch (error) {
             console.error('Login error:', error)
             return false
@@ -86,32 +103,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }
 
-    const signup = async (email: string, password: string, name: string): Promise<boolean> => {
+    const sendVerificationOTP = async (email: string): Promise<boolean> => {
+        try {
+            await authService.sendVerificationOTP(email)
+            return true
+        } catch (error) {
+            console.error('Send OTP error:', error)
+            throw error // Re-throw to let the component display the actual error message
+        }
+    }
+
+    const signup = async (name: string, email: string, password: string, otp: string): Promise<boolean> => {
         try {
             setIsLoading(true)
 
-            // Simulate API call - replace with your actual registration logic
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            const response = await authService.completeRegistration({
+                name,
+                email,
+                password,
+                otp,
+                role: 'USER'
+            })
 
-            // Mock registration - replace with real API call
-            if (email && password && name) {
-                const mockUser: User = {
-                    id: '1',
-                    email,
-                    name,
-                    role: 'user'
-                }
+            setUser(response.user)
+            apiClient.setAuthToken(response.tokens.accessToken)
+            
+            localStorage.setItem('user', JSON.stringify(response.user))
+            localStorage.setItem('accessToken', response.tokens.accessToken)
+            localStorage.setItem('refreshToken', response.tokens.refreshToken)
 
-                const mockToken = 'mock-jwt-token-' + Date.now()
-
-                setUser(mockUser)
-                localStorage.setItem('user', JSON.stringify(mockUser))
-                localStorage.setItem('token', mockToken)
-
-                return true
-            }
-
-            return false
+            return true
         } catch (error) {
             console.error('Signup error:', error)
             return false
@@ -120,10 +141,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }
 
-    const logout = () => {
-        setUser(null)
-        localStorage.removeItem('user')
-        localStorage.removeItem('token')
+    const logout = async () => {
+        try {
+            await authService.logout()
+        } catch (error) {
+            console.error('Logout error:', error)
+        } finally {
+            clearAuth()
+        }
     }
 
     const value: AuthContextType = {
@@ -132,7 +157,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading,
         login,
         logout,
-        signup
+        signup,
+        sendVerificationOTP
     }
 
     return (

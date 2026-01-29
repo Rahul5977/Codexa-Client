@@ -39,8 +39,8 @@ export function LoginForm3({
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
     defaultValues: {
-      email: "test@example.com",
-      password: "password",
+      email: "",
+      password: "",
     },
   })
 
@@ -56,8 +56,9 @@ export function LoginForm3({
       } else {
         setError("Invalid email or password. Please try again.")
       }
-    } catch (err) {
-      setError("An error occurred during login. Please try again.")
+    } catch (err: any) {
+      const errorMessage = err?.message || "An error occurred during login. Please try again."
+      setError(errorMessage)
       console.error("Login error:", err)
     }
   }
@@ -80,9 +81,6 @@ export function LoginForm3({
                 <p className="text-muted-foreground text-balance">
                   Login to your Codexa account
                 </p>
-                <div className="text-xs text-muted-foreground bg-muted p-2 rounded mt-2">
-                  Demo: Use any email/password to login
-                </div>
               </div>
 
               <Form {...form}>
@@ -103,7 +101,7 @@ export function LoginForm3({
                             <FormControl>
                               <Input
                                 type="email"
-                                placeholder="test@example.com"
+                                placeholder="m@example.com"
                                 {...field}
                               />
                             </FormControl>
@@ -148,12 +146,12 @@ export function LoginForm3({
             </div>
           </div>
           <div className="bg-muted relative hidden md:block">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-muted-foreground text-sm text-center p-6">
-                <h3 className="font-semibold mb-2">Demo Credentials</h3>
-                <p>Email: test@example.com</p>
-                <p>Password: password</p>
-                <p className="mt-2 text-xs">Or use any email/password combo</p>
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold">Join Codexa Today</h3>
+                <p className="text-sm text-muted-foreground">
+                  Access thousands of coding problems and improve your skills
+                </p>
               </div>
             </div>
           </div>

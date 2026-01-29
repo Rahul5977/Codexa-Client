@@ -4,10 +4,13 @@ import type { ApiResponse, RequestOptions } from './types/common'
 class ApiClient {
   private baseURL: string
   private timeout: number
+  private authToken: string | null = null
 
   constructor() {
     this.baseURL = API_CONFIG.BASE_URL
     this.timeout = API_CONFIG.TIMEOUT
+    // Try to load token from localStorage on initialization
+    this.authToken = localStorage.getItem('accessToken')
   }
 
   private async request<T>(
@@ -16,7 +19,7 @@ class ApiClient {
     body?: any,
     options: RequestOptions = {}
   ): Promise<ApiResponse<T>> {
-    const url = `${this.baseURL}${endpoint}`
+    const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`
     const { headers = {}, params, timeout = this.timeout } = options
 
     // Build query string from params
@@ -35,12 +38,19 @@ class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), timeout)
 
     try {
+      const requestHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...headers,
+      }
+
+      // Add auth token if available
+      if (this.authToken) {
+        requestHeaders['Authorization'] = `Bearer ${this.authToken}`
+      }
+
       const response = await fetch(finalUrl, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers,
-        },
+        headers: requestHeaders,
         body: body ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       })
@@ -49,7 +59,8 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`)
+        const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -89,14 +100,21 @@ class ApiClient {
   }
 
   // Utility method to set auth token
-//   setAuthToken(token: string) {
-//     // This could be implemented to automatically add auth headers to all requests
-//   }
+  setAuthToken(token: string) {
+    this.authToken = token
+    localStorage.setItem('accessToken', token)
+  }
 
   // Utility method to clear auth token
-//   clearAuthToken() {
-//     // This could be implemented to remove auth headers
-//   }
+  clearAuthToken() {
+    this.authToken = null
+    localStorage.removeItem('accessToken')
+  }
+
+  // Get current auth token
+  getAuthToken(): string | null {
+    return this.authToken
+  }
 }
 
 export const apiClient = new ApiClient()
