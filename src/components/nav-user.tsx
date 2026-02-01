@@ -15,7 +15,7 @@ export function NavUser({
   user: {
     name: string
     email: string
-    avatar: string
+    image_url: string
   }
 }) {
   const { logout } = useAuth()
@@ -30,7 +30,7 @@ export function NavUser({
     <div>
       <Link to="/settings/account" className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg">
-          < Logo size={28} />
+          {user.image_url ? <img src={user.image_url} alt={user.name} className="h-8 w-8 rounded-full" /> : <Logo size={28} />}
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">
           <span className="truncate font-medium">{user.name}</span>
