@@ -50,9 +50,15 @@ export function LoginForm3({
       const success = await login(values.email, values.password)
 
       if (success) {
-        // Redirect to the page they tried to visit or dashboard
-        const from = location.state?.from?.pathname || "/dashboard"
-        navigate(from, { replace: true })
+        // Get user from context to determine role-based redirect
+        const savedUser = localStorage.getItem('user')
+        if (savedUser) {
+          const user = JSON.parse(savedUser)
+          const dashboardPath = user.role === 'ADMIN' ? '/admin/dashboard' : '/user/dashboard'
+          navigate(dashboardPath, { replace: true })
+        } else {
+          navigate('/user/dashboard', { replace: true })
+        }
       } else {
         setError("Invalid email or password. Please try again.")
       }

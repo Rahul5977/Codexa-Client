@@ -3,12 +3,15 @@ import { useAuth } from '@/contexts/auth-context'
 import { LoadingSpinner } from '@/components/ui/loading-spinner'
 import type { ReactNode } from 'react'
 
+type UserRole = 'USER' | 'ADMIN' | 'STUDENT' | 'TEACHER'
+
 interface ProtectedRouteProps {
     children: ReactNode
+    allowedRoles?: UserRole[]
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-    const { isAuthenticated, isLoading } = useAuth()
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+    const { isAuthenticated, isLoading, user } = useAuth()
     const location = useLocation()
 
     if (isLoading) {
@@ -24,6 +27,14 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         return <Navigate to="/auth/sign-in" state={{ from: location }} replace />
     }
 
+    // Check role-based access
+    if (allowedRoles && allowedRoles.length > 0) {
+        if (!user || !allowedRoles.includes(user.role as UserRole)) {
+            // Redirect to forbidden page if user doesn't have required role
+            return <Navigate to="/errors/forbidden" replace />
+        }
+    }
+
     return <>{children}</>
 }
 
@@ -32,7 +43,7 @@ interface PublicRouteProps {
 }
 
 export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
-    const { isAuthenticated, isLoading } = useAuth()
+    const { isAuthenticated, isLoading, user } = useAuth()
 
     if (isLoading) {
         return (
@@ -43,8 +54,9 @@ export const PublicRoute: React.FC<PublicRouteProps> = ({ children }) => {
     }
 
     if (isAuthenticated) {
-        // Redirect authenticated users away from auth pages
-        return <Navigate to="/dashboard" replace />
+        // Redirect authenticated users to their role-based dashboard
+        const dashboardPath = user?.role === 'ADMIN' ? '/admin/dashboard' : '/user/dashboard'
+        return <Navigate to={dashboardPath} replace />
     }
 
     return <>{children}</>

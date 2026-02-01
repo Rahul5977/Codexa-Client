@@ -105,7 +105,15 @@ export function SignupForm3({
       const success = await signup(fullName, values.email, values.password, values.otp)
 
       if (success) {
-        navigate("/dashboard", { replace: true })
+        // Get user from context to determine role-based redirect
+        const savedUser = localStorage.getItem('user')
+        if (savedUser) {
+          const user = JSON.parse(savedUser)
+          const dashboardPath = user.role === 'ADMIN' ? '/admin/dashboard' : '/user/dashboard'
+          navigate(dashboardPath, { replace: true })
+        } else {
+          navigate('/user/dashboard', { replace: true })
+        }
       } else {
         setError("Registration failed. Please check your OTP and try again.")
       }
@@ -239,7 +247,7 @@ export function SignupForm3({
                             OTP Sent Successfully!
                           </h4>
                           <p className="text-xs text-primary mt-1">
-                            We've sent a 6-digit verification code to <span className="font-medium">{email}</span>. 
+                            We've sent a 6-digit verification code to <span className="font-medium">{email}</span>.
                             Please check your inbox and enter the code below.
                           </p>
                         </div>

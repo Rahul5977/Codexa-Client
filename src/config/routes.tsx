@@ -51,14 +51,14 @@ export const routes: RouteConfig[] = [
     element: <Landing />
   },
 
-  // Dashboard Routes
+  // Role-based Dashboard Routes
   {
-    path: "/dashboard",
-    element: <ProtectedRoute><Dashboard /></ProtectedRoute>
+    path: "/user/dashboard",
+    element: <ProtectedRoute allowedRoles={['USER']}><Dashboard /></ProtectedRoute>
   },
   {
-    path: "/dashboard-2",
-    element: <ProtectedRoute><Dashboard2 /></ProtectedRoute>
+    path: "/admin/dashboard",
+    element: <ProtectedRoute allowedRoles={['ADMIN']}><Dashboard2 /></ProtectedRoute>
   },
 
   // Application Routes
