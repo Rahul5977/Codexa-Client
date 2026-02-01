@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { SidebarConfigProvider } from '@/contexts/sidebar-context'
 import { AuthProvider } from '@/contexts/auth-context'
 import { AppRouter } from '@/components/router/app-router'
+import { Toaster } from '@/components/ui/sonner'
 import { useEffect } from 'react'
 import { initGTM } from '@/utils/analytics'
 
@@ -18,6 +19,7 @@ function App() {
   return (
     <div className="font-sans antialiased" style={{ fontFamily: 'var(--font-inter)' }}>
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <Toaster position="top-right" expand={false} richColors />
         <AuthProvider>
           <SidebarConfigProvider>
             <Router basename={basename}>

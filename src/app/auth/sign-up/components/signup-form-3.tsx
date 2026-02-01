@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Logo } from "@/components/logo"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -42,10 +43,9 @@ export function SignupForm3({
 }: React.ComponentProps<"div">) {
   const [hasOTPSent, setHasOTPSent] = useState(false)
   const [isLoadingOTP, setIsLoadingOTP] = useState(false)
-  const [error, setError] = useState<string>("")
-  const [otpError, setOtpError] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
-  const { signup, sendVerificationOTP, isLoading } = useAuth()
+  const { signup, sendVerificationOTP } = useAuth()
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -67,21 +67,25 @@ export function SignupForm3({
     if (!emailValid) return
 
     setIsLoadingOTP(true)
-    setOtpError("")
-    setError("")
 
     try {
       const success = await sendVerificationOTP(email)
       if (success) {
         setHasOTPSent(true)
-        // Clear any previous OTP value
         form.setValue('otp', '')
+        toast.success("OTP sent successfully", {
+          description: `We've sent a 6-digit verification code to ${email}`
+        })
       } else {
-        setOtpError("Failed to send OTP. Please try again.")
+        toast.error("Failed to send OTP", {
+          description: "Please try again."
+        })
       }
     } catch (err: any) {
-      const errorMessage = err?.message || "An error occurred while sending OTP."
-      setOtpError(errorMessage)
+      const errorMessage = err?.response?.data?.message || err?.message || "An error occurred while sending OTP."
+      toast.error("Failed to send OTP", {
+        description: errorMessage
+      })
       console.error("Send OTP error:", err)
     } finally {
       setIsLoadingOTP(false)
@@ -90,21 +94,28 @@ export function SignupForm3({
 
   const onSubmit = async (values: SignupFormValues) => {
     if (!hasOTPSent || !values.otp) {
-      setError("Please verify your email with OTP first")
+      toast.error("Verification required", {
+        description: "Please verify your email with OTP first"
+      })
       return
     }
 
     if (values.otp.length !== 6) {
-      setError("Please enter a valid 6-digit OTP")
+      toast.error("Invalid OTP", {
+        description: "Please enter a valid 6-digit OTP"
+      })
       return
     }
 
+    setIsSubmitting(true)
     try {
-      setError("")
       const fullName = `${values.firstName} ${values.lastName}`
       const success = await signup(fullName, values.email, values.password, values.otp)
 
       if (success) {
+        toast.success("Registration successful", {
+          description: "Welcome to Codexa! Redirecting to your dashboard..."
+        })
         // Get user from context to determine role-based redirect
         const savedUser = localStorage.getItem('user')
         if (savedUser) {
@@ -115,12 +126,18 @@ export function SignupForm3({
           navigate('/user/dashboard', { replace: true })
         }
       } else {
-        setError("Registration failed. Please check your OTP and try again.")
+        toast.error("Registration failed", {
+          description: "Please check your OTP and try again."
+        })
       }
     } catch (err: any) {
-      const errorMessage = err?.message || "An error occurred during registration. Please try again."
-      setError(errorMessage)
+      const errorMessage = err?.response?.data?.message || err?.message || "An error occurred during registration. Please try again."
+      toast.error("Registration failed", {
+        description: errorMessage
+      })
       console.error("Signup error:", err)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -146,12 +163,6 @@ export function SignupForm3({
                       Enter your information to create a new account
                     </p>
                   </div>
-
-                  {error && (
-                    <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                      {error}
-                    </div>
-                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <FormField
@@ -221,14 +232,6 @@ export function SignupForm3({
                           </div>
                         </FormControl>
                         <FormMessage />
-                        {otpError && (
-                          <p className="text-sm text-destructive flex items-center gap-1 mt-1">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                            {otpError}
-                          </p>
-                        )}
                       </FormItem>
                     )}
                   />
@@ -354,9 +357,9 @@ export function SignupForm3({
                   <Button
                     type="submit"
                     className="w-full cursor-pointer"
-                    disabled={!hasOTPSent || isLoading}
+                    disabled={!hasOTPSent || isSubmitting}
                   >
-                    {isLoading ? "Creating Account..." : "Create Account"}
+                    {isSubmitting ? "Creating Account..." : "Create Account"}
                   </Button>
 
                   <div className="text-center text-sm">

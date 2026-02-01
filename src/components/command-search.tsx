@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom"
 import { Command as CommandPrimitive } from "cmdk"
 import {
   Search,
-  LayoutPanelLeft,
-  LayoutDashboard,
   Mail,
   CheckSquare,
   MessageCircle,
@@ -62,7 +60,7 @@ const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.List
     ref={ref}
-    className={cn("max-h-[400px] overflow-y-auto overflow-x-hidden pb-2", className)}
+    className={cn("max-h-100 overflow-y-auto overflow-x-hidden pb-2", className)}
     {...props}
   />
 ))
@@ -87,7 +85,7 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      "overflow-hidden px-2 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-zinc-500 dark:[&_[cmdk-group-heading]]:text-zinc-400 [&:not(:first-child)]:mt-2",
+      "overflow-hidden px-2 **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-2 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-medium **:[[cmdk-group-heading]]:text-zinc-500 dark:**:[[cmdk-group-heading]]:text-zinc-400 not-first:mt-2",
       className
     )}
     {...props}
@@ -127,9 +125,6 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
   const commandRef = React.useRef<HTMLDivElement>(null)
 
   const searchItems: SearchItem[] = [
-    // Dashboards
-    { title: "Dashboard 1", url: "/dashboard", group: "Dashboards", icon: LayoutDashboard },
-    { title: "Dashboard 2", url: "/dashboard-2", group: "Dashboards", icon: LayoutPanelLeft },
 
     // Apps
     { title: "Mail", url: "/mail", group: "Apps", icon: Mail },
@@ -189,7 +184,7 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="overflow-hidden p-0 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-[640px]">
+      <DialogContent className="overflow-hidden p-0 shadow-2xl border border-zinc-200 dark:border-zinc-800 max-w-160">
         <DialogTitle className="sr-only">Command Search</DialogTitle>
         <Command
           ref={commandRef}

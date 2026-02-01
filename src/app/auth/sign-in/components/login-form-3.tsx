@@ -3,8 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { useState } from "react"
-import { useNavigate, useLocation, Link } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { z } from "zod"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -31,10 +32,9 @@ export function LoginForm3({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const { login, isLoading } = useAuth()
-  const [error, setError] = useState<string>("")
+  const { login } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
-  const location = useLocation()
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -45,11 +45,14 @@ export function LoginForm3({
   })
 
   const onSubmit = async (values: LoginFormValues) => {
+    setIsSubmitting(true)
     try {
-      setError("")
       const success = await login(values.email, values.password)
 
       if (success) {
+        toast.success("Login successful", {
+          description: "Redirecting to your dashboard..."
+        })
         // Get user from context to determine role-based redirect
         const savedUser = localStorage.getItem('user')
         if (savedUser) {
@@ -60,12 +63,18 @@ export function LoginForm3({
           navigate('/user/dashboard', { replace: true })
         }
       } else {
-        setError("Invalid email or password. Please try again.")
+        toast.error("Login failed", {
+          description: "Invalid email or password. Please try again."
+        })
       }
     } catch (err: any) {
-      const errorMessage = err?.message || "An error occurred during login. Please try again."
-      setError(errorMessage)
+      const errorMessage = err?.response?.data?.message || err?.message || "An error occurred during login. Please try again."
+      toast.error("Login failed", {
+        description: errorMessage
+      })
       console.error("Login error:", err)
+    } finally {
+      setIsSubmitting(false)
     }
   }
   return (
@@ -92,11 +101,6 @@ export function LoginForm3({
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                   <div className="grid gap-6">
-                    {error && (
-                      <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
-                        {error}
-                      </div>
-                    )}
                     <div className="grid gap-4">
                       <FormField
                         control={form.control}
@@ -136,8 +140,8 @@ export function LoginForm3({
                           </FormItem>
                         )}
                       />
-                      <Button type="submit" className="w-full cursor-pointer" disabled={isLoading}>
-                        {isLoading ? "Signing in..." : "Login"}
+                      <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
+                        {isSubmitting ? "Signing in..." : "Login"}
                       </Button>
                     </div>
                   </div>
