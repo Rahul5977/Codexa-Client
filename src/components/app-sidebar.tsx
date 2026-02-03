@@ -112,12 +112,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             icon: Settings,
             items: [
               {
-                title: "User Settings",
-                url: "/settings/user",
-              },
-              {
-                title: "Account Settings",
-                url: "/settings/account",
+                title: "Profile",
+                url: "/settings/profile",
               },
               {
                 title: "Appearance",

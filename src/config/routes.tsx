@@ -27,8 +27,7 @@ const InternalServerError = lazy(() => import('@/app/errors/internal-server-erro
 const UnderMaintenance = lazy(() => import('@/app/errors/under-maintenance/page'))
 
 // Settings pages
-const UserSettings = lazy(() => import('@/app/settings/user/page'))
-const AccountSettings = lazy(() => import('@/app/settings/account/page'))
+const ProfileSettings = lazy(() => import('@/app/settings/profile/page'))
 const AppearanceSettings = lazy(() => import('@/app/settings/appearance/page'))
 const ConnectionSettings = lazy(() => import('@/app/settings/connections/page'))
 
@@ -131,12 +130,8 @@ export const routes: RouteConfig[] = [
 
   // Settings Routes
   {
-    path: "/settings/user",
-    element: <ProtectedRoute><UserSettings /></ProtectedRoute>
-  },
-  {
-    path: "/settings/account",
-    element: <ProtectedRoute><AccountSettings /></ProtectedRoute>
+    path: "/settings/profile",
+    element: <ProtectedRoute><ProfileSettings /></ProtectedRoute>
   },
   {
     path: "/settings/appearance",

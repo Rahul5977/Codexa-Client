@@ -148,11 +148,8 @@ export function CommandSearch({ open, onOpenChange }: CommandSearchProps) {
     { title: "Under Maintenance", url: "/errors/under-maintenance", group: "Errors", icon: AlertTriangle },
 
     // Settings
-    { title: "User Settings", url: "/settings/user", group: "Settings", icon: User },
-    { title: "Account Settings", url: "/settings/account", group: "Settings", icon: Settings },
-    { title: "Plans & Billing", url: "/settings/billing", group: "Settings", icon: CreditCard },
+    { title: "Profile Settings", url: "/settings/profile", group: "Settings", icon: User },
     { title: "Appearance", url: "/settings/appearance", group: "Settings", icon: Palette },
-    { title: "Notifications", url: "/settings/notifications", group: "Settings", icon: Bell },
     { title: "Connections", url: "/settings/connections", group: "Settings", icon: Link2 },
 
     // Pages

@@ -28,7 +28,7 @@ export function NavUser({
 
   return (
     <div>
-      <Link to="/settings/account" className="flex items-center gap-2">
+      <Link to="/settings/profile" className="flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg">
           {user.image_url ? <img src={user.image_url} alt={user.name} className="h-8 w-8 rounded-full" /> : <Logo size={28} />}
         </div>

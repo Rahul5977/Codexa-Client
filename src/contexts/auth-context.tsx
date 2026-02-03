@@ -11,6 +11,7 @@ interface AuthContextType {
     logout: () => void
     signup: (name: string, email: string, password: string, otp: string) => Promise<boolean>
     sendVerificationOTP: (email: string) => Promise<boolean>
+    updateUser: (updatedUser: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -151,6 +152,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }
 
+    const updateUser = (updatedUser: User) => {
+        setUser(updatedUser)
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+    }
+
     const value: AuthContextType = {
         user,
         isAuthenticated,
@@ -158,7 +164,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         logout,
         signup,
-        sendVerificationOTP
+        sendVerificationOTP,
+        updateUser
     }
 
     return (

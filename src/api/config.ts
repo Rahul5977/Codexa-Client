@@ -1,7 +1,7 @@
 // Base API configuration
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
-  AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8000/api',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:3000/api/auth',
   TIMEOUT: 10000,
   MOCK_ENABLED: import.meta.env.VITE_USE_MOCK_DATA !== 'false', // Default to true for development
 } as const
@@ -10,17 +10,19 @@ export const API_CONFIG = {
 export const ENDPOINTS = {
   // Authentication
   AUTH: {
-    SEND_VERIFICATION_OTP: '/auth/send-verification-otp',
-    COMPLETE_REGISTRATION: '/auth/complete-registration',
-    REGISTER: '/auth/register',
-    LOGIN: '/auth/login',
-    LOGOUT: '/auth/logout',
-    REFRESH: '/auth/refresh',
-    ME: '/auth/me',
-    REQUEST_OTP: '/auth/request-otp',
-    VERIFY_OTP: '/auth/verify-otp',
-    FORGOT_PASSWORD: '/auth/forgot-password',
-    RESET_PASSWORD: (token: string) => `/auth/reset-password/${token}`,
+    SEND_VERIFICATION_OTP: '/send-verification-otp',
+    COMPLETE_REGISTRATION: '/complete-registration',
+    REGISTER: '/register',
+    LOGIN: '/login',
+    LOGOUT: '/logout',
+    REFRESH: '/refresh',
+    ME: '/me',
+    REQUEST_OTP: '/request-otp',
+    VERIFY_OTP: '/verify-otp',
+    FORGOT_PASSWORD: '/forgot-password',
+    RESET_PASSWORD: (token: string) => `/reset-password/${token}`,
+    UPDATE_PROFILE: '/profile',
+    UPDATE_PROFILE_PICTURE: '/profile-picture',
   },
   // Dashboard
   DASHBOARD: {

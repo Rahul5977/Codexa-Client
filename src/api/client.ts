@@ -39,8 +39,12 @@ class ApiClient {
 
     try {
       const requestHeaders: Record<string, string> = {
-        'Content-Type': 'application/json',
         ...headers,
+      }
+
+      // Only set Content-Type for non-FormData requests
+      if (!(body instanceof FormData)) {
+        requestHeaders['Content-Type'] = 'application/json'
       }
 
       // Add auth token if available
@@ -51,7 +55,7 @@ class ApiClient {
       const response = await fetch(finalUrl, {
         method,
         headers: requestHeaders,
-        body: body ? JSON.stringify(body) : undefined,
+        body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
         signal: controller.signal,
       })
 

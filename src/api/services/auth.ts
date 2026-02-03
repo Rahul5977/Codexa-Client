@@ -161,4 +161,29 @@ export const authService = {
       { password, confirmPassword }
     )
   },
+
+  /**
+   * Update user profile
+   */
+  updateProfile: async (data: { name: string; bio?: string }): Promise<User> => {
+    const response = await apiClient.put<ApiResponseWrapper<{ user: User }>>(
+      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.UPDATE_PROFILE}`,
+      data
+    )
+    return (response as any).data.user
+  },
+
+  /**
+   * Update profile picture
+   */
+  updateProfilePicture: async (file: File): Promise<User> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    const response = await apiClient.put<ApiResponseWrapper<{ user: User }>>(
+      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.UPDATE_PROFILE_PICTURE}`,
+      formData
+    )
+    return (response as any).data.user
+  },
 }
