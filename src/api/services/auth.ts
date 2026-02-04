@@ -11,6 +11,7 @@ export interface User {
   image_url?: string
   bio?: string
   currentRating?: number
+  totalSolved?: number
   createdAt?: string
   updatedAt?: string
 }

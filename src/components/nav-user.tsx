@@ -29,7 +29,7 @@ export function NavUser({
   return (
     <div>
       <Link to="/settings/profile" className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg">
+        <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
           {user.image_url ? <img src={user.image_url} alt={user.name} className="h-8 w-8 rounded-full" /> : <Logo size={28} />}
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">
@@ -40,7 +40,7 @@ export function NavUser({
         </div>
       </Link>
       <Button onClick={handleLogout} variant={'destructive'} className="mt-2 w-full cursor-pointer">
-        <div className="flex items-center justify-center rounded-lg">
+        <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
           < LogOut />
         </div>
         <div className="grid flex-1 text-left text-sm leading-tight">

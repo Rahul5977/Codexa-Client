@@ -13,53 +13,63 @@ import {
   Copy,
   Check,
 } from "lucide-react"
-import { type Problem } from "@/api/types/dashboard"
+import { type Problem } from "@/api/services/problem"
 
 interface CodeEditorProps {
   problem: Problem | null
   loading?: boolean
+  onCodeChange?: (code: string, languageId: number) => void
 }
 
+// Language ID mapping for Judge0
 const LANGUAGES = [
-  { value: "javascript", label: "JavaScript", extension: "js", monaco: "javascript" },
-  { value: "typescript", label: "TypeScript", extension: "ts", monaco: "typescript" },
-  { value: "python", label: "Python", extension: "py", monaco: "python" },
-  { value: "java", label: "Java", extension: "java", monaco: "java" },
-  { value: "cpp", label: "C++", extension: "cpp", monaco: "cpp" },
-  { value: "c", label: "C", extension: "c", monaco: "c" },
-  { value: "go", label: "Go", extension: "go", monaco: "go" },
-  { value: "rust", label: "Rust", extension: "rs", monaco: "rust" }
+  { value: "javascript", label: "JavaScript", extension: "js", monaco: "javascript", judge0Id: 63 },
+  { value: "typescript", label: "TypeScript", extension: "ts", monaco: "typescript", judge0Id: 74 },
+  { value: "python", label: "Python", extension: "py", monaco: "python", judge0Id: 71 },
+  { value: "java", label: "Java", extension: "java", monaco: "java", judge0Id: 62 },
+  { value: "cpp", label: "C++", extension: "cpp", monaco: "cpp", judge0Id: 54 },
+  { value: "c", label: "C", extension: "c", monaco: "c", judge0Id: 50 },
+  { value: "go", label: "Go", extension: "go", monaco: "go", judge0Id: 60 },
+  { value: "rust", label: "Rust", extension: "rs", monaco: "rust", judge0Id: 73 }
 ]
 
 const DEFAULT_CODE_TEMPLATES = {
-  javascript: `function twoSum(nums, target) {
+  javascript: `function solution(nums, target) {
     // Your code here
     
 }`,
-  python: `def two_sum(nums, target):
+  python: `def solution(nums, target):
     # Your code here
     pass`,
   java: `class Solution {
-    public int[] twoSum(int[] nums, int target) {
+    public int[] solution(int[] nums, int target) {
         // Your code here
         
     }
 }`,
   cpp: `class Solution {
 public:
-    vector<int> twoSum(vector<int>& nums, int target) {
+    vector<int> solution(vector<int>& nums, int target) {
         // Your code here
         
     }
 };`
 }
 
-export function CodeEditor({ loading }: CodeEditorProps) {
+export function CodeEditor({ loading, onCodeChange }: CodeEditorProps) {
   const { theme } = useTheme()
   const [selectedLanguage, setSelectedLanguage] = useState("javascript")
   const [code, setCode] = useState(DEFAULT_CODE_TEMPLATES.javascript)
   const [copied, setCopied] = useState(false)
   const [editorTheme, setEditorTheme] = useState<string>("vs-dark")
+
+  // Notify parent of code/language changes
+  useEffect(() => {
+    const language = LANGUAGES.find(lang => lang.value === selectedLanguage)
+    if (onCodeChange && language) {
+      onCodeChange(code, language.judge0Id)
+    }
+  }, [code, selectedLanguage, onCodeChange])
 
   // Update Monaco theme based on system theme
   useEffect(() => {

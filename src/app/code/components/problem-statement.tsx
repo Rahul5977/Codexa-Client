@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CheckCircle2, Clock, TrendingUp, Building2, Code2, FileText, History, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { type Problem } from "@/api/types/dashboard"
+import { type Problem } from "@/api/services/problem"
 
 interface ProblemStatementProps {
   problem: Problem | null

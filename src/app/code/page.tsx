@@ -1,9 +1,7 @@
-"use client"
-
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useSearchParams } from "react-router-dom"
-import { useProblems } from "@/hooks/api/use-dashboard"
-import { type Problem } from "@/api/types/dashboard"
+import { useProblem } from "@/hooks/api/use-problems"
+import { useCodeExecution, useCodeSubmission, useSubmission } from "@/hooks/api/use-submissions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { ProblemStatement } from "./components/problem-statement"
@@ -13,66 +11,120 @@ import { Code2, TestTube, Play, Square, Zap, Plus, FileText, History } from "luc
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { PanelResizeHandle, PanelGroup, Panel } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function CodePage() {
   const [searchParams] = useSearchParams()
   const problemId = searchParams.get('id')
-  const { data: problems, loading: problemsLoading, error: problemsError } = useProblems()
-  const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+  const { problem, loading: problemLoading, error: problemError } = useProblem(problemId)
+  const { execute: runCode, result: runResult, loading: runLoading } = useCodeExecution()
+  const { submit: submitCode, submissionId, loading: submitLoading } = useCodeSubmission()
+  const { submission, poll: pollSubmission } = useSubmission(submissionId)
+  
   const [activeTab, setActiveTab] = useState("code")
-  const [isRunning, setIsRunning] = useState(false)
   const [leftPanelSize, setLeftPanelSize] = useState(45)
   const [rightPanelSize, setRightPanelSize] = useState(55)
   const [problemTab, setProblemTab] = useState<"description" | "submissions">("description")
+  
+  // Refs to get code and language from CodeEditor
+  const codeRef = useRef<string>("")
+  const languageRef = useRef<number>(63) // Default to JavaScript
 
+  // Poll for submission results when a submission is made
   useEffect(() => {
-    if (!problemsLoading && problems && problemId) {
-      const problem = problems.find((p: Problem) => p.id === parseInt(problemId))
-      setSelectedProblem(problem || null)
+    if (submissionId) {
+      let cleanup: (() => void) | undefined
+      
+      pollSubmission().then((cleanupFn) => {
+        cleanup = cleanupFn
+      })
+      
+      return () => {
+        if (cleanup) cleanup()
+      }
     }
-    setLoading(problemsLoading)
-  }, [problems, problemsLoading, problemId])
+  }, [submissionId, pollSubmission])
 
   const handleRun = useCallback(async () => {
-    setIsRunning(true)
-    setActiveTab("testcases") // Switch to test cases tab
-    // Simulate code execution
-    setTimeout(() => {
-      setIsRunning(false)
-    }, 2000)
-  }, [])
+    if (!codeRef.current) {
+      toast.error("Please write some code first")
+      return
+    }
+    
+    setActiveTab("testcases")
+    
+    try {
+      await runCode({
+        code: codeRef.current,
+        languageId: languageRef.current,
+        stdin: "" // Can be customized based on test case selection
+      })
+    } catch (error) {
+      console.error("Run error:", error)
+    }
+  }, [runCode])
 
-  const handleSubmit = useCallback(() => {
-    console.log('Submitting code...')
-    // Add your submit logic here
-  }, [])
+  const handleSubmit = useCallback(async () => {
+    if (!user) {
+      toast.error("Please login to submit code")
+      return
+    }
+    
+    if (!problemId) {
+      toast.error("No problem selected")
+      return
+    }
+    
+    if (!codeRef.current) {
+      toast.error("Please write some code first")
+      return
+    }
+    
+    try {
+      await submitCode({
+        userId: user.id,
+        problemId: problemId,
+        code: codeRef.current,
+        languageId: languageRef.current
+      })
+      setActiveTab("testcases")
+    } catch (error) {
+      console.error("Submit error:", error)
+    }
+  }, [user, problemId, submitCode])
 
   const handleAddTest = useCallback(() => {
-    setActiveTab("testcases") // Switch to test cases tab
-    // Trigger add test in TestCases component
+    setActiveTab("testcases")
+  }, [])
+
+  // Update code and language refs
+  const handleCodeChange = useCallback((code: string, languageId: number) => {
+    codeRef.current = code
+    languageRef.current = languageId
   }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + ' to run code
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
         e.preventDefault()
-        if (!isRunning) {
+        if (!runLoading && !submitLoading) {
           handleRun()
         }
       }
-      // Cmd/Ctrl + Enter to submit
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
-        handleSubmit()
+        if (!runLoading && !submitLoading) {
+          handleSubmit()
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isRunning, handleRun, handleSubmit])
+  }, [runLoading, submitLoading, handleRun, handleSubmit])
 
   if (!problemId) {
     return (
@@ -84,6 +136,8 @@ export default function CodePage() {
       </div>
     )
   }
+
+  const isRunning = runLoading || submitLoading
 
   return (
     <BaseLayout>
@@ -127,12 +181,11 @@ export default function CodePage() {
                   </button>
                 </div>
               ) : (
-                // Normal view with content
                 <div className="h-full overflow-hidden">
                   <ProblemStatement
-                    problem={selectedProblem}
-                    loading={loading}
-                    error={problemsError}
+                    problem={problem}
+                    loading={problemLoading}
+                    error={problemError}
                     activeTab={problemTab}
                     onTabChange={setProblemTab}
                   />
@@ -239,15 +292,19 @@ export default function CodePage() {
 
                   <TabsContent value="code" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
                     <CodeEditor
-                      problem={selectedProblem}
-                      loading={loading}
+                      problem={problem}
+                      loading={problemLoading}
+                      onCodeChange={handleCodeChange}
                     />
                   </TabsContent>
 
                   <TabsContent value="testcases" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
                     <TestCases
-                      problem={selectedProblem}
-                      loading={loading}
+                      problem={problem}
+                      loading={problemLoading}
+                      runResult={runResult}
+                      submission={submission}
+                      isRunning={isRunning}
                     />
                   </TabsContent>
                 </Tabs>

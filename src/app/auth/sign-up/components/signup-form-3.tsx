@@ -21,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { useTheme } from "@/hooks/use-theme"
 
 const signupFormSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters"),
@@ -46,6 +47,7 @@ export function SignupForm3({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
   const { signup, sendVerificationOTP } = useAuth()
+  const {theme} = useTheme()
 
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupFormSchema),
@@ -374,9 +376,9 @@ export function SignupForm3({
           </div>
           <div className="bg-muted relative hidden md:block">
             <img
-              src="https://ui.codexa.com/placeholder.svg"
+              src={theme === 'dark' ? "/signup_dark.jpeg" : "/signup_light.jpeg"}
               alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.95] dark:invert"
+              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.95]"
             />
           </div>
         </CardContent>

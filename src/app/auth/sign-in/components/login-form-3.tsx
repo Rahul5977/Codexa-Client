@@ -20,6 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { useTheme } from "@/hooks/use-theme"
 
 const loginFormSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -35,6 +36,7 @@ export function LoginForm3({
   const { login } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const navigate = useNavigate()
+  const {theme} = useTheme()
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginFormSchema),
@@ -80,8 +82,8 @@ export function LoginForm3({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <div className="p-6 md:p-8">
+        <CardContent className="grid p-0 md:grid-cols-2 min-h-[70vh]">
+          <div className="p-6 md:p-8 my-auto">
             <div className="flex flex-col gap-6">
               <div className="flex justify-center mb-2">
                 <Link to="/" className="flex items-center gap-2 font-medium">
@@ -156,14 +158,8 @@ export function LoginForm3({
             </div>
           </div>
           <div className="bg-muted relative hidden md:block">
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div className="text-center space-y-2">
-                <h3 className="text-lg font-semibold">Join Codexa Today</h3>
-                <p className="text-sm text-muted-foreground">
-                  Access thousands of coding problems and improve your skills
-                </p>
-              </div>
-            </div>
+            <img src={theme === 'dark' ? "/login_dark.jpeg" : "/login_light.jpeg"} alt="Image"
+              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.95]" />
           </div>
         </CardContent>
       </Card>

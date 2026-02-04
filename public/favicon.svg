@@ -1,22 +1,10 @@
-import * as React from "react"
-
-interface LogoProps extends React.SVGProps<SVGSVGElement> {
-  size?: number
-}
-
-export function Logo({ size = 24, className, ...props }: LogoProps) {
-  return (
-    <svg
-      width={size}
-      height={size}
+<svg
+      width="32"
+      height="32"
       viewBox="0 0 32 32"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      {...props}
     >
-      {/* <X> logo design */}
-      {/* Left angle bracket < */}
       <path
         d="M12 8L6 16L12 24"
         stroke="currentColor"
@@ -24,8 +12,6 @@ export function Logo({ size = 24, className, ...props }: LogoProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-
-      {/* X in the middle */}
       <path
         d="M14 12L18 20M18 12L14 20"
         stroke="currentColor"
@@ -33,8 +19,6 @@ export function Logo({ size = 24, className, ...props }: LogoProps) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-
-      {/* Right angle bracket > */}
       <path
         d="M20 8L26 16L20 24"
         stroke="currentColor"
@@ -43,5 +27,3 @@ export function Logo({ size = 24, className, ...props }: LogoProps) {
         strokeLinejoin="round"
       />
     </svg>
-  )
-}

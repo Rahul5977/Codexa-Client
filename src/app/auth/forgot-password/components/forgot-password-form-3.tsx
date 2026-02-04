@@ -18,6 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { useTheme } from "@/hooks/use-theme"
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -43,6 +44,7 @@ export function ForgotPasswordForm3({
   const [step, setStep] = useState<'email' | 'otp' | 'success'>('email')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>("")
+  const { theme } = useTheme()
 
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -143,8 +145,8 @@ export function ForgotPasswordForm3({
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden p-0">
-        <CardContent className="grid p-0 md:grid-cols-2">
-          <div className="p-6 md:p-8">
+        <CardContent className="grid p-0 md:grid-cols-2 min-h-[70vh]">
+          <div className="p-6 md:p-8 my-auto">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)}>
                 <div className="flex flex-col gap-6">
@@ -275,9 +277,9 @@ export function ForgotPasswordForm3({
           </div>
           <div className="bg-muted relative hidden md:block">
             <img
-              src="https://ui.codexa.com/placeholder.svg"
+              src={theme === 'dark' ? "/forget_dark.jpeg" : "/forget_light.jpeg"}
               alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.95] dark:invert"
+              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.95]"
             />
           </div>
         </CardContent>
