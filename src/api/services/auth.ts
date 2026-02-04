@@ -1,5 +1,5 @@
-import { apiClient } from '../client'
-import { API_CONFIG, ENDPOINTS } from '../config'
+import { apiClient } from "../client"
+import { API_CONFIG, ENDPOINTS } from "../config"
 
 // Types for authentication
 export interface User {
@@ -70,7 +70,7 @@ export const authService = {
     email: string
     password: string
     otp: string
-    role?: 'USER' | 'STUDENT' | 'TEACHER'
+    role?: "USER" | "STUDENT" | "TEACHER"
   }): Promise<RegisterResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<RegisterResponse>>(
       `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.COMPLETE_REGISTRATION}`,
@@ -112,18 +112,24 @@ export const authService = {
   /**
    * Refresh access token
    */
-  refreshToken: async (refreshToken: string): Promise<{ accessToken: string }> => {
-    const response = await apiClient.post<ApiResponseWrapper<{ accessToken: string }>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.REFRESH}`,
-      { refreshToken }
-    )
+  refreshToken: async (
+    refreshToken: string
+  ): Promise<{ accessToken: string }> => {
+    const response = await apiClient.post<
+      ApiResponseWrapper<{ accessToken: string }>
+    >(`${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.REFRESH}`, {
+      refreshToken,
+    })
     return (response as any).data
   },
 
   /**
    * Request OTP for email verification or password reset
    */
-  requestOTP: async (email: string, type: 'VERIFY_EMAIL' | 'RESET_PASSWORD' = 'VERIFY_EMAIL'): Promise<SendOTPResponse> => {
+  requestOTP: async (
+    email: string,
+    type: "VERIFY_EMAIL" | "RESET_PASSWORD" = "VERIFY_EMAIL"
+  ): Promise<SendOTPResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<SendOTPResponse>>(
       `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.REQUEST_OTP}`,
       { email, type }
@@ -135,10 +141,12 @@ export const authService = {
    * Verify OTP
    */
   verifyOTP: async (email: string, otp: string): Promise<VerifyOTPResponse> => {
-    const response = await apiClient.post<ApiResponseWrapper<VerifyOTPResponse>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.VERIFY_OTP}`,
-      { email, otp }
-    )
+    const response = await apiClient.post<
+      ApiResponseWrapper<VerifyOTPResponse>
+    >(`${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.VERIFY_OTP}`, {
+      email,
+      otp,
+    })
     return (response as any).data
   },
 
@@ -156,7 +164,11 @@ export const authService = {
   /**
    * Reset password with token
    */
-  resetPassword: async (token: string, password: string, confirmPassword: string): Promise<void> => {
+  resetPassword: async (
+    token: string,
+    password: string,
+    confirmPassword: string
+  ): Promise<void> => {
     await apiClient.post(
       `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.RESET_PASSWORD(token)}`,
       { password, confirmPassword }
@@ -166,7 +178,10 @@ export const authService = {
   /**
    * Update user profile
    */
-  updateProfile: async (data: { name: string; bio?: string }): Promise<User> => {
+  updateProfile: async (data: {
+    name: string
+    bio?: string
+  }): Promise<User> => {
     const response = await apiClient.put<ApiResponseWrapper<{ user: User }>>(
       `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.UPDATE_PROFILE}`,
       data
@@ -179,8 +194,8 @@ export const authService = {
    */
   updateProfilePicture: async (file: File): Promise<User> => {
     const formData = new FormData()
-    formData.append('file', file)
-    
+    formData.append("file", file)
+
     const response = await apiClient.put<ApiResponseWrapper<{ user: User }>>(
       `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.UPDATE_PROFILE_PICTURE}`,
       formData

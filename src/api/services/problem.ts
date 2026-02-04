@@ -1,4 +1,4 @@
-import { apiClient } from '../client'
+import { apiClient } from "../client"
 
 // Types for problems
 export interface Example {
@@ -12,7 +12,7 @@ export interface TestCase {
   output: string
 }
 
-export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD'
+export type Difficulty = "EASY" | "MEDIUM" | "HARD"
 
 export interface Problem {
   id: string
@@ -55,7 +55,8 @@ interface ApiResponseWrapper<T> {
  * Get all problems
  */
 export const getAllProblems = async (): Promise<Problem[]> => {
-  const problemServiceUrl = import.meta.env.VITE_PROBLEM_SERVICE_URL || 'http://localhost:3002/api'
+  const problemServiceUrl =
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
   const response = await apiClient.get<ApiResponseWrapper<Problem[]>>(
     `${problemServiceUrl}/problems`
   )
@@ -66,7 +67,8 @@ export const getAllProblems = async (): Promise<Problem[]> => {
  * Get problem by ID
  */
 export const getProblemById = async (id: string): Promise<Problem> => {
-  const problemServiceUrl = import.meta.env.VITE_PROBLEM_SERVICE_URL || 'http://localhost:3002/api'
+  const problemServiceUrl =
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
   const response = await apiClient.get<ApiResponseWrapper<Problem>>(
     `${problemServiceUrl}/problems/${id}`
   )
@@ -76,8 +78,11 @@ export const getProblemById = async (id: string): Promise<Problem> => {
 /**
  * Create a new problem (Admin/Teacher only)
  */
-export const createProblem = async (data: CreateProblemInput): Promise<Problem> => {
-  const problemServiceUrl = import.meta.env.VITE_PROBLEM_SERVICE_URL || 'http://localhost:3002/api'
+export const createProblem = async (
+  data: CreateProblemInput
+): Promise<Problem> => {
+  const problemServiceUrl =
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
   const response = await apiClient.post<ApiResponseWrapper<Problem>>(
     `${problemServiceUrl}/problems`,
     data
@@ -92,7 +97,8 @@ export const updateProblem = async (
   id: string,
   data: UpdateProblemInput
 ): Promise<Problem> => {
-  const problemServiceUrl = import.meta.env.VITE_PROBLEM_SERVICE_URL || 'http://localhost:3002/api'
+  const problemServiceUrl =
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
   const response = await apiClient.put<ApiResponseWrapper<Problem>>(
     `${problemServiceUrl}/problems/${id}`,
     data
@@ -104,8 +110,7 @@ export const updateProblem = async (
  * Delete a problem (Admin/Teacher only)
  */
 export const deleteProblem = async (id: string): Promise<void> => {
-  const problemServiceUrl = import.meta.env.VITE_PROBLEM_SERVICE_URL || 'http://localhost:3002/api'
-  await apiClient.delete(
-    `${problemServiceUrl}/problems/${id}`
-  )
+  const problemServiceUrl =
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
+  await apiClient.delete(`${problemServiceUrl}/problems/${id}`)
 }
