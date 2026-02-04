@@ -31,7 +31,7 @@ export function ProblemSet() {
   const [pageSize, setPageSize] = useState(10)
 
   // Navigation handler for problem selection
-  const handleProblemClick = (problemId: number) => {
+  const handleProblemClick = (problemId: string) => {
     navigate(`/code?id=${problemId}`)
   }
 

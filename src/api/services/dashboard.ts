@@ -91,15 +91,22 @@ class DashboardService {
       }
 
       // Transform backend problem format to dashboard problem format
-      let problems = allProblems.map((p) => ({
-        id: parseInt(p.id) || 0,
+      const difficultyMap: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
+        'EASY': 'Easy',
+        'MEDIUM': 'Medium',
+        'HARD': 'Hard'
+      }
+      
+      let problems = allProblems.map(p => ({
+        id: p.id, // Keep the UUID as string
         title: p.title,
-        difficulty: p.difficulty,
-        category: p.tags[0] || "General",
+        difficulty: difficultyMap[p.difficulty] || 'Medium',
+        category: p.tags[0] || 'General',
         tags: p.tags || [],
-        status: "unsolved" as const, // TODO: Get actual status from submissions
-        acceptanceRate: 50, // Placeholder
-        submissions: 0, // Placeholder
+        status: 'unsolved' as const, // TODO: Get actual status from submissions
+        acceptance: '50%', // Placeholder
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt
       }))
 
       // Apply filters
@@ -254,18 +261,25 @@ class DashboardService {
 
     try {
       const problem = await getProblem(id.toString())
+      
+      const difficultyMap: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
+        'EASY': 'Easy',
+        'MEDIUM': 'Medium',
+        'HARD': 'Hard'
+      }
 
       return {
         success: true,
         data: {
-          id: parseInt(problem.id) || 0,
+          id: problem.id, // Keep UUID as string
           title: problem.title,
-          difficulty: problem.difficulty,
+          difficulty: difficultyMap[problem.difficulty] || 'Medium',
           category: problem.tags[0] || "General",
           tags: problem.tags,
           status: "unsolved" as const,
-          acceptanceRate: 50,
-          submissions: 0,
+          acceptance: '50%',
+          createdAt: problem.createdAt,
+          updatedAt: problem.updatedAt
         },
         message: "Problem fetched successfully",
       }

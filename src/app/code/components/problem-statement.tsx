@@ -7,16 +7,17 @@ import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CheckCircle2, Clock, TrendingUp, Building2, Code2, FileText, History, XCircle } from "lucide-react"
+import { CheckCircle2, Clock, TrendingUp, Building2, Code2, FileText, History, XCircle, Lightbulb } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type Problem } from "@/api/services/problem"
+import { Hints } from "./hints"
 
 interface ProblemStatementProps {
   problem: Problem | null
   loading: boolean
   error: string | null
-  activeTab?: "description" | "submissions"
-  onTabChange?: (tab: "description" | "submissions") => void
+  activeTab?: "description" | "submissions" | "hints"
+  onTabChange?: (tab: "description" | "submissions" | "hints") => void
 }
 
 interface Submission {
@@ -69,7 +70,7 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
   // Use external tab if provided, otherwise use internal
   const activeTab = externalActiveTab || internalActiveTab
   const handleTabChange = (value: string) => {
-    const tab = value as "description" | "submissions"
+    const tab = value as "description" | "submissions" | "hints"
     if (onTabChange) {
       onTabChange(tab)
     } else {
@@ -179,6 +180,10 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
               <FileText className="h-4 w-4" />
               <span className="font-medium">Description</span>
             </TabsTrigger>
+            <TabsTrigger value="hints" className="gap-2">
+              <Lightbulb className="h-4 w-4" />
+              <span className="font-medium">Hints</span>
+            </TabsTrigger>
             <TabsTrigger value="submissions" className="gap-2">
               <History className="h-4 w-4" />
               <span className="font-medium">Submissions</span>
@@ -203,11 +208,6 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                     <TrendingUp className="h-3 w-3 mr-1.5" />
                     {problem.acceptance} Acceptance
                   </Badge>
-                  {problem.tags?.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs px-3 py-1 bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                      {tag}
-                    </Badge>
-                  ))}
                 </div>
               </div>
             </div>
@@ -219,7 +219,7 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
               {/* Description */}
               <div>
                 <p className="text-muted-foreground leading-relaxed text-base">
-                  {problem.description || "No description available for this problem."}
+                  {problem.statement || "No description available for this problem."}
                 </p>
               </div>
 
@@ -279,6 +279,10 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
               )}
             </div>
           </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="hints" className="flex-1 m-0 h-full">
+          <Hints problem={problem} />
         </TabsContent>
 
         <TabsContent value="submissions" className="flex-1 m-0 overflow-y-auto">

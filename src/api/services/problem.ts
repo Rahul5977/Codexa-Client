@@ -12,7 +12,7 @@ export interface TestCase {
   output: string
 }
 
-export type Difficulty = "EASY" | "MEDIUM" | "HARD"
+export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD' | 'Easy' | 'Medium' | 'Hard'
 
 export interface Problem {
   id: string
