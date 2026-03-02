@@ -43,21 +43,13 @@ export interface CreateProblemInput {
 
 export interface UpdateProblemInput extends Partial<CreateProblemInput> {}
 
-// Backend API response wrapper
-interface ApiResponseWrapper<T> {
-  statusCode: number
-  data: T
-  message: string
-  success: boolean
-}
-
 /**
  * Get all problems
  */
 export const getAllProblems = async (): Promise<Problem[]> => {
   const problemServiceUrl =
-    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
-  const response = await apiClient.get<ApiResponseWrapper<Problem[]>>(
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
+  const response = await apiClient.get<Problem[]>(
     `${problemServiceUrl}/problems`
   )
   return response.data
@@ -68,8 +60,8 @@ export const getAllProblems = async (): Promise<Problem[]> => {
  */
 export const getProblemById = async (id: string): Promise<Problem> => {
   const problemServiceUrl =
-    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
-  const response = await apiClient.get<ApiResponseWrapper<Problem>>(
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
+  const response = await apiClient.get<Problem>(
     `${problemServiceUrl}/problems/${id}`
   )
   return response.data
@@ -82,8 +74,8 @@ export const createProblem = async (
   data: CreateProblemInput
 ): Promise<Problem> => {
   const problemServiceUrl =
-    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
-  const response = await apiClient.post<ApiResponseWrapper<Problem>>(
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
+  const response = await apiClient.post<Problem>(
     `${problemServiceUrl}/problems`,
     data
   )
@@ -98,8 +90,8 @@ export const updateProblem = async (
   data: UpdateProblemInput
 ): Promise<Problem> => {
   const problemServiceUrl =
-    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
-  const response = await apiClient.put<ApiResponseWrapper<Problem>>(
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
+  const response = await apiClient.put<Problem>(
     `${problemServiceUrl}/problems/${id}`,
     data
   )
@@ -111,6 +103,6 @@ export const updateProblem = async (
  */
 export const deleteProblem = async (id: string): Promise<void> => {
   const problemServiceUrl =
-    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:3002/api"
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
   await apiClient.delete(`${problemServiceUrl}/problems/${id}`)
 }
