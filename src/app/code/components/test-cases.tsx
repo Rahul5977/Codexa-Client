@@ -22,12 +22,12 @@ interface TestCase {
 interface TestCasesProps {
   problem?: Problem | null
   loading?: boolean
-  runResult?: RunCodeResult | null
+  runResults?: RunCodeResult[]
   submission?: SubmissionResult | null
   isRunning?: boolean
 }
 
-export function TestCases({ problem, loading, runResult, submission, isRunning }: TestCasesProps) {
+export function TestCases({ problem, loading, runResults, submission, isRunning }: TestCasesProps) {
   
   const getStatusIcon = (status: TestCase['status']) => {
     switch (status) {
@@ -76,13 +76,30 @@ export function TestCases({ problem, loading, runResult, submission, isRunning }
   }
 
   // Show run result
-  if (runResult && testCases.length > 0) {
-    testCases[0] = {
-      ...testCases[0],
-      actualOutput: runResult.stdout || runResult.stderr || runResult.compile_output || 'No output',
-      status: runResult.status === 'Accepted' ? 'passed' : runResult.stderr || runResult.compile_output ? 'error' : 'failed',
-      executionTime: runResult.time ? parseFloat(runResult.time) * 1000 : undefined
-    }
+  if (runResults && runResults.length > 0) {
+    console.log('Processing run results:', runResults)
+    runResults.forEach((runResult, index) => {
+      if (testCases[index] && runResult) {
+        const actualOut = (runResult.stdout || '').trim()
+        const expectedOut = testCases[index].expectedOutput.trim()
+        const isCorrect = actualOut === expectedOut
+        
+        console.log(`Test case ${index + 1}:`, {
+          actualOutput: actualOut,
+          expectedOutput: expectedOut,
+          isCorrect,
+          status: runResult.status
+        })
+        
+        testCases[index] = {
+          ...testCases[index],
+          actualOutput: runResult.stdout || runResult.stderr || runResult.compile_output || 'No output',
+          status: runResult.stderr || runResult.compile_output ? 'error' : 
+                  isCorrect ? 'passed' : 'failed',
+          executionTime: runResult.time ? parseFloat(runResult.time) * 1000 : undefined
+        }
+      }
+    })
   }
 
   // Show submission result
@@ -128,6 +145,28 @@ export function TestCases({ problem, loading, runResult, submission, isRunning }
 
   return (
     <div className="h-full flex flex-col bg-background overflow-y-auto">
+      {/* Run Results Summary Header */}
+      {runResults && runResults.length > 0 && (
+        <div className="p-4 border-b border-border bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div>
+                <h3 className="font-semibold text-lg">Run Results</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className={cn(
+                    "text-sm font-semibold px-3 py-1",
+                    testCases.every(tc => tc.status === 'passed') ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                    testCases.some(tc => tc.status === 'error') ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
+                    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                  )}>
+                    {testCases.filter(tc => tc.status === 'passed').length} / {testCases.length} Passed
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 bg-linear-to-b from-transparent to-muted/5">
         <ScrollArea className="h-full">

@@ -49,7 +49,7 @@ export interface UpdateProblemInput extends Partial<CreateProblemInput> {}
 export const getAllProblems = async (): Promise<Problem[]> => {
   const problemServiceUrl =
     import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
-  const response = await apiClient.get<Problem[]>(
+  const response = await apiClient.get<any>(
     `${problemServiceUrl}/problems`
   )
   return response.data
@@ -61,7 +61,7 @@ export const getAllProblems = async (): Promise<Problem[]> => {
 export const getProblemById = async (id: string): Promise<Problem> => {
   const problemServiceUrl =
     import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
-  const response = await apiClient.get<Problem>(
+  const response = await apiClient.get<any>(
     `${problemServiceUrl}/problems/${id}`
   )
   return response.data
@@ -75,7 +75,7 @@ export const createProblem = async (
 ): Promise<Problem> => {
   const problemServiceUrl =
     import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
-  const response = await apiClient.post<Problem>(
+  const response = await apiClient.post<any>(
     `${problemServiceUrl}/problems`,
     data
   )
@@ -91,7 +91,7 @@ export const updateProblem = async (
 ): Promise<Problem> => {
   const problemServiceUrl =
     import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
-  const response = await apiClient.put<Problem>(
+  const response = await apiClient.put<any>(
     `${problemServiceUrl}/problems/${id}`,
     data
   )

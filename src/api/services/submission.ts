@@ -68,7 +68,7 @@ export const runCode = async (data: RunCodeInput): Promise<RunCodeResult> => {
     `${codeServiceUrl}/submissions/run`,
     data
   )
-  return response.data
+  return response
 }
 
 /**
@@ -80,7 +80,7 @@ export const submitCode = async (data: CreateSubmissionInput): Promise<{ message
     `${codeServiceUrl}/submissions`,
     data
   )
-  return response.data
+  return response
 }
 
 /**
@@ -91,7 +91,7 @@ export const getSubmissionById = async (id: string): Promise<{ message: string; 
   const response = await apiClient.get<{ message: string; submission: SubmissionResult }>(
     `${codeServiceUrl}/submissions/${id}`
   )
-  return response.data
+  return response
 }
 
 /**
@@ -106,5 +106,5 @@ export const getSubmissions = async (userId?: string, problemId?: string): Promi
   const response = await apiClient.get<SubmissionResult[]>(
     `${codeServiceUrl}/submissions?${params.toString()}`
   )
-  return response.data
+  return response
 }

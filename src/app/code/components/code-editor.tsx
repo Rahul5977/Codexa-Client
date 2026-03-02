@@ -19,6 +19,8 @@ interface CodeEditorProps {
   problem: Problem | null
   loading?: boolean
   onCodeChange?: (code: string, languageId: number) => void
+  initialCode?: string
+  initialLanguage?: string
 }
 
 // Language ID mapping for Judge0
@@ -41,25 +43,46 @@ const DEFAULT_CODE_TEMPLATES = {
   python: `def solution(nums, target):
     # Your code here
     pass`,
-  java: `class Solution {
-    public int[] solution(int[] nums, int target) {
+  java: `class Main {
+    public static void main(String[] args) {
         // Your code here
         
     }
 }`,
-  cpp: `class Solution {
-public:
-    vector<int> solution(vector<int>& nums, int target) {
-        // Your code here
-        
-    }
-};`
+  cpp: `#include <iostream>
+#include <vector>
+using namespace std;
+
+int main() {
+    // Your code here
+    return 0;
+}`,
+  typescript: `function solution(nums: number[], target: number): number[] {
+    // Your code here
+    return [];
+}`,
+  c: `#include <stdio.h>
+
+int main() {
+    // Your code here
+    return 0;
+}`,
+  go: `package main
+
+import "fmt"
+
+func main() {
+    // Your code here
+}`,
+  rust: `fn main() {
+    // Your code here
+}`
 }
 
-export function CodeEditor({ loading, onCodeChange }: CodeEditorProps) {
+export function CodeEditor({ loading, onCodeChange, initialCode, initialLanguage }: CodeEditorProps) {
   const { theme } = useTheme()
-  const [selectedLanguage, setSelectedLanguage] = useState("javascript")
-  const [code, setCode] = useState(DEFAULT_CODE_TEMPLATES.javascript)
+  const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || "python")
+  const [code, setCode] = useState(initialCode || DEFAULT_CODE_TEMPLATES.python)
   const [copied, setCopied] = useState(false)
   const [editorTheme, setEditorTheme] = useState<string>("vs-dark")
 
@@ -110,9 +133,13 @@ export function CodeEditor({ loading, onCodeChange }: CodeEditorProps) {
 
   const handleLanguageChange = useCallback((language: string) => {
     setSelectedLanguage(language)
-    const template = DEFAULT_CODE_TEMPLATES[language as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"
-    setCode(template)
-  }, [])
+    // Only reset code if it's still the default template
+    const currentTemplate = DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES]
+    if (code === currentTemplate || code.trim() === '') {
+      const template = DEFAULT_CODE_TEMPLATES[language as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"
+      setCode(template)
+    }
+  }, [selectedLanguage, code])
 
   const handleReset = useCallback(() => {
     const template = DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"

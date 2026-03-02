@@ -19,7 +19,7 @@ export default function CodePage() {
   const problemId = searchParams.get('id')
   const { user } = useAuth()
   const { problem, loading: problemLoading, error: problemError } = useProblem(problemId)
-  const { execute: runCode, result: runResult, loading: runLoading } = useCodeExecution()
+  const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading } = useCodeExecution()
   const { submit: submitCode, submissionId, loading: submitLoading } = useCodeSubmission()
   const { submission, poll: pollSubmission } = useSubmission(submissionId)
   
@@ -28,9 +28,9 @@ export default function CodePage() {
   const [rightPanelSize, setRightPanelSize] = useState(55)
   const [problemTab, setProblemTab] = useState<"description" | "submissions">("description")
   
-  // Refs to get code and language from CodeEditor
-  const codeRef = useRef<string>("")
-  const languageRef = useRef<number>(63) // Default to JavaScript
+  // State for code and language (persists across tab switches)
+  const [code, setCode] = useState("")
+  const [languageId, setLanguageId] = useState(71) // Default to Python
 
   // Poll for submission results when a submission is made
   useEffect(() => {
@@ -48,23 +48,27 @@ export default function CodePage() {
   }, [submissionId, pollSubmission])
 
   const handleRun = useCallback(async () => {
-    if (!codeRef.current) {
+    if (!code || code.trim() === '') {
       toast.error("Please write some code first")
       return
     }
     
+    if (!problem?.examples || problem.examples.length === 0) {
+      toast.error("No test cases available for this problem")
+      return
+    }
+    
     setActiveTab("testcases")
+    toast.info(`Running your code against ${problem.examples.length} test case(s)...`)
     
     try {
-      await runCode({
-        code: codeRef.current,
-        languageId: languageRef.current,
-        stdin: "" // Can be customized based on test case selection
-      })
+      await runCodeMultiple(problem.examples, code, languageId)
+      toast.success("Code executed successfully!")
     } catch (error) {
       console.error("Run error:", error)
+      toast.error("Failed to run code. Please try again.")
     }
-  }, [runCode])
+  }, [code, languageId, runCodeMultiple, setActiveTab, problem])
 
   const handleSubmit = useCallback(async () => {
     if (!user) {
@@ -77,32 +81,36 @@ export default function CodePage() {
       return
     }
     
-    if (!codeRef.current) {
+    if (!code || code.trim() === '') {
       toast.error("Please write some code first")
       return
     }
+    
+    setActiveTab("testcases")
+    toast.info("Submitting your solution...")
     
     try {
       await submitCode({
         userId: user.id,
         problemId: problemId,
-        code: codeRef.current,
-        languageId: languageRef.current
+        code: code,
+        languageId: languageId
       })
-      setActiveTab("testcases")
+      // Success toast is shown in the hook
     } catch (error) {
       console.error("Submit error:", error)
+      // Error toast is shown in the hook
     }
-  }, [user, problemId, submitCode])
+  }, [user, problemId, code, languageId, submitCode, setActiveTab])
 
   const handleAddTest = useCallback(() => {
     setActiveTab("testcases")
   }, [])
 
-  // Update code and language refs
-  const handleCodeChange = useCallback((code: string, languageId: number) => {
-    codeRef.current = code
-    languageRef.current = languageId
+  // Update code and language state
+  const handleCodeChange = useCallback((newCode: string, newLanguageId: number) => {
+    setCode(newCode)
+    setLanguageId(newLanguageId)
   }, [])
 
   // Keyboard shortcuts
@@ -295,6 +303,8 @@ export default function CodePage() {
                       problem={problem}
                       loading={problemLoading}
                       onCodeChange={handleCodeChange}
+                      initialCode={code}
+                      initialLanguage={languageId === 71 ? "python" : languageId === 63 ? "javascript" : "python"}
                     />
                   </TabsContent>
 
@@ -302,7 +312,7 @@ export default function CodePage() {
                     <TestCases
                       problem={problem}
                       loading={problemLoading}
-                      runResult={runResult}
+                      runResults={runResults}
                       submission={submission}
                       isRunning={isRunning}
                     />
