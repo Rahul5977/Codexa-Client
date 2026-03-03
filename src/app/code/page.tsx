@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ProblemStatement } from "./components/problem-statement"
 import { CodeEditor } from "./components/code-editor"
 import { TestCases } from "./components/test-cases"
+import { SubmissionDetails } from "./components/submission-details"
 import { Code2, TestTube, Play, Square, Zap, Plus, FileText, History, ArrowLeft, Save } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { PanelResizeHandle, PanelGroup, Panel } from "react-resizable-panels"
@@ -45,6 +46,7 @@ export default function CodePage() {
   const [rightPanelSize, setRightPanelSize] = useState(55)
   const [problemTab, setProblemTab] = useState<"description" | "submissions" | "hints">("description")
   const [solutionSaved, setSolutionSaved] = useState(false)
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
   
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
@@ -121,6 +123,23 @@ export default function CodePage() {
       }
     }
   }, [submissionId, pollSubmission])
+
+  // Auto-switch to submissions tab when submission completes
+  useEffect(() => {
+    if (submission && submission.status !== 'PENDING' && submission.status !== 'PROCESSING') {
+      // Submission completed, switch to submissions tab to show results
+      setProblemTab("submissions")
+      // Also set this submission as selected and switch to details view
+      setSelectedSubmissionId(submission.id)
+      setActiveTab("submission-details")
+    }
+  }, [submission])
+
+  // Handle submission click from the submissions list
+  const handleSubmissionClick = useCallback((submissionId: string) => {
+    setSelectedSubmissionId(submissionId)
+    setActiveTab("submission-details")
+  }, [])
 
   const handleRun = useCallback(async () => {
     if (!code || code.trim() === '') {
@@ -310,6 +329,7 @@ export default function CodePage() {
                     error={problemError}
                     activeTab={problemTab}
                     onTabChange={setProblemTab}
+                    onSubmissionClick={handleSubmissionClick}
                   />
                 </div>
               )}
@@ -369,6 +389,14 @@ export default function CodePage() {
                           <TestTube className="h-4 w-4" />
                           <span className="font-medium">Test Cases</span>
                         </TabsTrigger>
+                        {selectedSubmissionId && (
+                          <TabsTrigger
+                            value="submission-details"
+                          >
+                            <FileText className="h-4 w-4" />
+                            <span className="font-medium">Submission</span>
+                          </TabsTrigger>
+                        )}
                       </TabsList>
 
                       {/* Action Buttons */}
@@ -454,6 +482,10 @@ export default function CodePage() {
                       submission={submission}
                       isRunning={isRunning}
                     />
+                  </TabsContent>
+
+                  <TabsContent value="submission-details" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
+                    <SubmissionDetails submissionId={selectedSubmissionId} />
                   </TabsContent>
                 </Tabs>
               )}

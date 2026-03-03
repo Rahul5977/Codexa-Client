@@ -58,6 +58,8 @@ export interface SubmissionResult {
   memory?: number
   createdAt: string
   languageId: number
+  language?: string
+  code?: string
 }
 
 /**

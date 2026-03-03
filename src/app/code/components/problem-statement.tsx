@@ -20,6 +20,7 @@ interface ProblemStatementProps {
   error: string | null
   activeTab?: "description" | "submissions" | "hints"
   onTabChange?: (tab: "description" | "submissions" | "hints") => void
+  onSubmissionClick?: (submissionId: string) => void
 }
 
 // Map SubmissionStatus from backend to display format
@@ -55,7 +56,7 @@ const formatTimeAgo = (date: string | Date) => {
   return 'Just now'
 }
 
-export function ProblemStatement({ problem, loading, error, activeTab: externalActiveTab, onTabChange }: ProblemStatementProps) {
+export function ProblemStatement({ problem, loading, error, activeTab: externalActiveTab, onTabChange, onSubmissionClick }: ProblemStatementProps) {
   const [internalActiveTab, setInternalActiveTab] = useState("description")
   const { user } = useAuth()
   const { submissions, loading: submissionsLoading, fetch: fetchSubmissions } = useSubmissionHistory(user?.id, problem?.id)
@@ -314,7 +315,7 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                   ))}
                 </div>
               ) : (
-                <div className="space-y-3 overflow-x-auto">
+                <div className="space-y-3">
                   {submissions && submissions.length > 0 ? (
                     submissions.map((submission) => {
                       const displayStatus = mapSubmissionStatus(submission.status)
@@ -323,41 +324,45 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                       const timestamp = formatTimeAgo(submission.createdAt)
                     
                       return (
-                        <Card key={submission.id} className="p-4 border-border/50 hover:shadow-md transition-all bg-linear-to-br from-muted/10 to-background">
-                        <div className="flex items-center justify-between">
-                          <div className="flex flex-col items-start gap-2 flex-1">
-                            <div className="flex items-center gap-2">
-                              {getSubmissionStatusIcon(displayStatus)}
-                              <Badge className={cn("text-xs font-semibold", getSubmissionStatusColor(displayStatus))}>
-                                {displayStatus}
-                              </Badge>
-                            </div>
+                        <Card 
+                          key={submission.id} 
+                          className="p-4 border-border/50 hover:shadow-md transition-all cursor-pointer hover:border-primary/30 bg-linear-to-br from-muted/10 to-background"
+                          onClick={() => onSubmissionClick?.(submission.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex flex-col items-start gap-2 flex-1">
+                              <div className="flex items-center gap-2">
+                                {getSubmissionStatusIcon(displayStatus)}
+                                <Badge className={cn("text-xs font-semibold", getSubmissionStatusColor(displayStatus))}>
+                                  {displayStatus}
+                                </Badge>
+                              </div>
 
-                            <div className="flex items-center gap-6 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Runtime:</span>
-                                <span className="ml-2 font-medium">{runtime}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Memory:</span>
-                                <span className="ml-2 font-medium">{memory}</span>
-                              </div>
-                              {submission.language && (
+                              <div className="flex items-center gap-6 text-sm">
                                 <div>
-                                  <span className="text-muted-foreground">Language:</span>
-                                  <span className="ml-2 font-medium capitalize">{submission.language}</span>
+                                  <span className="text-muted-foreground">Runtime:</span>
+                                  <span className="ml-2 font-medium">{runtime}</span>
                                 </div>
-                              )}
+                                <div>
+                                  <span className="text-muted-foreground">Memory:</span>
+                                  <span className="ml-2 font-medium">{memory}</span>
+                                </div>
+                                {submission.language && (
+                                  <div>
+                                    <span className="text-muted-foreground">Language:</span>
+                                    <span className="ml-2 font-medium capitalize">{submission.language}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-sm text-muted-foreground">
+                              {timestamp}
                             </div>
                           </div>
-
-                          <div className="text-sm text-muted-foreground">
-                            {timestamp}
-                          </div>
-                        </div>
-                      </Card>
-                    )
-                  })
+                        </Card>
+                      )
+                    })
                   ) : (
                     <div className="text-center py-12">
                       <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
