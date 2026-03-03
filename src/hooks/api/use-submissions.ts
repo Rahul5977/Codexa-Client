@@ -159,6 +159,7 @@ export function useSubmission(id: string | null) {
     const pollInterval = setInterval(async () => {
       try {
         attempts++
+        const result = await fetch()
         console.log('Polling attempt', attempts, '- Submission status:', result?.status)
         
         if (result && result.status !== 'PENDING' && result.status !== 'PROCESSING') {
@@ -171,6 +172,8 @@ export function useSubmission(id: string | null) {
             toast.error('❌ Wrong answer')
           } else if (result.status === 'COMPILATION_ERROR') {
             toast.error('⚠️ Compilation error')
+          } else if (result.status === 'TIME_LIMIT_EXCEEDED') {
+            toast.error('⏱️ Time limit exceeded')
           } else if (result.status === 'ERROR') {
             toast.error('⚠️ Runtime error')
           } else {
