@@ -14,6 +14,20 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 
+// Map Judge0 language IDs to code stub keys
+const LANGUAGE_ID_TO_STUB_KEY: Record<number, string> = {
+  50: "c",
+  54: "cpp",
+  62: "java",
+  63: "javascript",
+  71: "python",
+  72: "ruby",
+  73: "rust",
+  74: "typescript",
+  78: "kotlin",
+  60: "go",
+}
+
 export default function CodePage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -62,6 +76,36 @@ export default function CodePage() {
       }
     }
   }, [isAssignmentContext, assignmentId, problemId])
+
+  // Load initial code from problem codeStubs when problem changes
+  useEffect(() => {
+    if (problem && problem.codeStubs && !isAssignmentContext) {
+      const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
+      const stubCode = problem.codeStubs[languageKey]
+      
+      // Only set initial code if current code is empty
+      if (stubCode && code.trim() === "") {
+        setCode(stubCode)
+        codeRef.current = stubCode
+      }
+    }
+  }, [problem, languageId, isAssignmentContext])
+
+  // Update code stub when language changes (only if code was stub or empty)
+  useEffect(() => {
+    if (problem && problem.codeStubs && !isAssignmentContext) {
+      const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
+      const stubCode = problem.codeStubs[languageKey]
+      
+      // Check if current code matches a code stub or is empty
+      const isStubOrEmpty = code.trim() === "" || Object.values(problem.codeStubs).some(stub => code.trim() === stub.trim())
+      
+      if (stubCode && isStubOrEmpty) {
+        setCode(stubCode)
+        codeRef.current = stubCode
+      }
+    }
+  }, [languageId])
 
   // Poll for submission results when a submission is made
   useEffect(() => {
@@ -398,7 +442,7 @@ export default function CodePage() {
                       loading={problemLoading}
                       onCodeChange={handleCodeChange}
                       initialCode={code}
-                      initialLanguage={languageId === 71 ? "python" : languageId === 63 ? "javascript" : "python"}
+                      initialLanguage={LANGUAGE_ID_TO_STUB_KEY[languageId] || "python"}
                     />
                   </TabsContent>
 

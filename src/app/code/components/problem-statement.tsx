@@ -201,17 +201,19 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  {getStatusIcon(problem.status)}
+                  {problem.status && getStatusIcon(problem.status)}
                   <h1 className="text-2xl font-bold tracking-tight">{problem.id}. {problem.title}</h1>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <Badge className={cn("text-xs font-semibold px-3 py-1", getDifficultyColor(problem.difficulty))}>
                     {problem.difficulty}
                   </Badge>
-                  <Badge variant="outline" className="text-xs px-3 py-1 border-muted-foreground/20">
-                    <TrendingUp className="h-3 w-3 mr-1.5" />
-                    {problem.acceptance} Acceptance
-                  </Badge>
+                  {problem.acceptance && (
+                    <Badge variant="outline" className="text-xs px-3 py-1 border-muted-foreground/20">
+                      <TrendingUp className="h-3 w-3 mr-1.5" />
+                      {problem.acceptance} Acceptance
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
@@ -228,42 +230,55 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
               </div>
 
               {/* Examples */}
-              <div>
-                <div className="space-y-4">
-                  <h4 className="font-semibold mb-3 text-foreground">Example 1:</h4>
-                  <div className="space-y-3 text-sm font-mono">
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground font-semibold min-w-22.5">Input:</span>
-                      <span className="text-foreground">nums = [2,7,11,15], target = 9</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground font-semibold min-w-22.5">Output:</span>
-                      <span className="text-primary font-semibold">[0,1]</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-muted-foreground font-semibold min-w-22.5">Explanation:</span>
-                      <span className="text-muted-foreground">Because nums[0] + nums[1] == 9, we return [0, 1].</span>
-                    </div>
+              {problem.examples && problem.examples.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold mb-4">Examples</h3>
+                  <div className="space-y-6">
+                    {problem.examples.map((example, index) => (
+                      <div key={index} className="space-y-3">
+                        <h4 className="font-semibold text-foreground">Example {index + 1}:</h4>
+                        <div className="space-y-2 text-sm font-mono">
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground font-semibold min-w-22.5">Input:</span>
+                            <span className="text-foreground">{example.input}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className="text-muted-foreground font-semibold min-w-22.5">Output:</span>
+                            <span className="text-primary font-semibold">{example.output}</span>
+                          </div>
+                          {example.explanation && (
+                            <div className="flex gap-2">
+                              <span className="text-muted-foreground font-semibold min-w-22.5">Explanation:</span>
+                              <span className="text-muted-foreground">{example.explanation}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              )}
 
-              <Separator className="bg-border/50" />
+              {problem.examples && problem.examples.length > 0 && <Separator className="bg-border/50" />}
 
               {/* Constraints */}
-              <div>
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                  Constraints
-                </h3>
-                <ul className="text-sm text-muted-foreground space-y-2">
-                  <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span><span>2 ≤ nums.length ≤ 10⁴</span></li>
-                  <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span><span>-10⁹ ≤ nums[i] ≤ 10⁹</span></li>
-                  <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span><span>-10⁹ ≤ target ≤ 10⁹</span></li>
-                  <li className="flex items-start gap-2"><span className="text-primary mt-0.5">•</span><span>Only one valid answer exists.</span></li>
-                </ul>
-              </div>
+              {problem.constraints && problem.constraints.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                    Constraints
+                  </h3>
+                  <ul className="text-sm text-muted-foreground space-y-2">
+                    {problem.constraints.map((constraint, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-primary mt-0.5">•</span>
+                        <span>{constraint}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-              <Separator className="bg-border/50" />
+              {problem.constraints && problem.constraints.length > 0 && <Separator className="bg-border/50" />}
 
               {/* Companies */}
               {problem.companies && problem.companies.length > 0 && (
@@ -300,14 +315,15 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                 </div>
               ) : (
                 <div className="space-y-3 overflow-x-auto">
-                  {submissions.map((submission) => {
-                    const displayStatus = mapSubmissionStatus(submission.status)
-                    const runtime = submission.time ? `${parseFloat(submission.time) * 1000}ms` : 'N/A'
-                    const memory = submission.memory ? `${(submission.memory / 1024).toFixed(1)}MB` : 'N/A'
-                    const timestamp = formatTimeAgo(submission.createdAt)
+                  {submissions && submissions.length > 0 ? (
+                    submissions.map((submission) => {
+                      const displayStatus = mapSubmissionStatus(submission.status)
+                      const runtime = submission.time ? `${parseFloat(submission.time) * 1000}ms` : 'N/A'
+                      const memory = submission.memory ? `${(submission.memory / 1024).toFixed(1)}MB` : 'N/A'
+                      const timestamp = formatTimeAgo(submission.createdAt)
                     
-                    return (
-                      <Card key={submission.id} className="p-4 border-border/50 hover:shadow-md transition-all bg-linear-to-br from-muted/10 to-background">
+                      return (
+                        <Card key={submission.id} className="p-4 border-border/50 hover:shadow-md transition-all bg-linear-to-br from-muted/10 to-background">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col items-start gap-2 flex-1">
                             <div className="flex items-center gap-2">
@@ -341,17 +357,16 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                         </div>
                       </Card>
                     )
-                  })}
-                </div>
-              )}
-
-              {!submissionsLoading && submissions.length === 0 && (
-                <div className="text-center py-12">
-                  <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Submissions Yet</h3>
-                  <p className="text-muted-foreground">
-                    Start coding to see your submission history here.
-                  </p>
+                  })
+                  ) : (
+                    <div className="text-center py-12">
+                      <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Submissions Yet</h3>
+                      <p className="text-muted-foreground">
+                        Start coding to see your submission history here.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

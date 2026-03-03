@@ -79,12 +79,43 @@ func main() {
 }`
 }
 
-export function CodeEditor({ loading, onCodeChange, initialCode, initialLanguage }: CodeEditorProps) {
+export function CodeEditor({ problem, loading, onCodeChange, initialCode, initialLanguage }: CodeEditorProps) {
   const { theme } = useTheme()
   const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || "python")
   const [code, setCode] = useState(initialCode || DEFAULT_CODE_TEMPLATES.python)
   const [copied, setCopied] = useState(false)
   const [editorTheme, setEditorTheme] = useState<string>("vs-dark")
+
+  // Helper to get template code - prefer problem codeStubs over defaults
+  const getTemplateCode = useCallback((language: string): string => {
+    if (problem?.codeStubs && problem.codeStubs[language]) {
+      return problem.codeStubs[language]
+    }
+    return DEFAULT_CODE_TEMPLATES[language as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"
+  }, [problem])
+
+  // Initialize code when component mounts or problem changes
+  useEffect(() => {
+    // If initialCode is provided (from assignment context), use it
+    if (initialCode) {
+      setCode(initialCode)
+    } 
+    // Otherwise, use problem's code stub if available
+    else if (problem?.codeStubs && problem.codeStubs[selectedLanguage]) {
+      setCode(problem.codeStubs[selectedLanguage])
+    }
+    // Fallback to default template
+    else {
+      setCode(DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here")
+    }
+  }, [problem?.id, initialCode])
+
+  // Sync selected language with parent
+  useEffect(() => {
+    if (initialLanguage && initialLanguage !== selectedLanguage) {
+      setSelectedLanguage(initialLanguage)
+    }
+  }, [initialLanguage])
 
   // Notify parent of code/language changes
   useEffect(() => {
@@ -134,17 +165,17 @@ export function CodeEditor({ loading, onCodeChange, initialCode, initialLanguage
   const handleLanguageChange = useCallback((language: string) => {
     setSelectedLanguage(language)
     // Only reset code if it's still the default template
-    const currentTemplate = DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES]
+    const currentTemplate = getTemplateCode(selectedLanguage)
     if (code === currentTemplate || code.trim() === '') {
-      const template = DEFAULT_CODE_TEMPLATES[language as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"
+      const template = getTemplateCode(language)
       setCode(template)
     }
-  }, [selectedLanguage, code])
+  }, [selectedLanguage, code, getTemplateCode])
 
   const handleReset = useCallback(() => {
-    const template = DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"
+    const template = getTemplateCode(selectedLanguage)
     setCode(template)
-  }, [selectedLanguage])
+  }, [selectedLanguage, getTemplateCode])
 
   const handleCopy = useCallback(async () => {
     try {

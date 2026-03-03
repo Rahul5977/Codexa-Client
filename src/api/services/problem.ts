@@ -25,6 +25,13 @@ export interface Problem {
   hints: string[]
   companies: string[]
   testcases: TestCase[]
+  functionName?: string
+  parameters?: { name: string; type: string }[]
+  returnType?: string
+  codeStubs?: Record<string, string>
+  hiddenTestcases?: TestCase[]
+  status?: 'solved' | 'attempted' | 'unsolved'
+  acceptance?: string
   createdAt: string
   updatedAt: string
 }

@@ -214,10 +214,11 @@ export function useSubmissionHistory(userId?: string, problemId?: string) {
     setError(null)
     try {
       const data = await getSubmissions(userId, problemId)
-      setSubmissions(data)
+      setSubmissions(Array.isArray(data) ? data : [])
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err.message || 'Failed to fetch submissions'
       setError(errorMessage)
+      setSubmissions([]) // Ensure submissions is always an array even on error
       toast.error(errorMessage)
     } finally {
       setLoading(false)
