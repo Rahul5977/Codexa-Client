@@ -36,6 +36,7 @@ export interface CreateSubmissionInput {
 export interface RunCodeInput {
   code: string
   languageId: number
+  problemId: string
   stdin?: string
 }
 

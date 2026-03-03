@@ -37,7 +37,7 @@ export function useCodeExecution() {
     }
   }, [])
 
-  const executeMultiple = useCallback(async (testCases: Array<{ input: string, expectedOutput: string }>, code: string, languageId: number) => {
+  const executeMultiple = useCallback(async (testCases: Array<{ input: string, expectedOutput: string }>, code: string, languageId: number, problemId: string) => {
     setLoading(true)
     setError(null)
     setResults([])
@@ -50,6 +50,7 @@ export function useCodeExecution() {
           const res = await runCode({
             code,
             languageId,
+            problemId,
             stdin: testCase.input
           })
           console.log('Individual test case result:', res)
@@ -59,9 +60,9 @@ export function useCodeExecution() {
           // Push an error result instead of failing completely
           allResults.push({
             status: 'Error',
-            stdout: null,
+            stdout: undefined,
             stderr: err?.response?.data?.message || err.message || 'Execution failed',
-            compile_output: null,
+            compile_output: undefined,
             time: '0',
             memory: 0
           })

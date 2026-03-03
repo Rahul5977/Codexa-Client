@@ -29,12 +29,16 @@ export default function CodePage() {
   const [activeTab, setActiveTab] = useState("code")
   const [leftPanelSize, setLeftPanelSize] = useState(45)
   const [rightPanelSize, setRightPanelSize] = useState(55)
-  const [problemTab, setProblemTab] = useState<"description" | "submissions">("description")
+  const [problemTab, setProblemTab] = useState<"description" | "submissions" | "hints">("description")
   const [solutionSaved, setSolutionSaved] = useState(false)
   
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
   const [languageId, setLanguageId] = useState(71) // Default to Python
+
+  // Refs for assignment context
+  const codeRef = useRef(code)
+  const languageRef = useRef(languageId)
 
   // Check if this is an assignment context
   const isAssignmentContext = Boolean(assignmentId && courseId)
@@ -47,7 +51,9 @@ export default function CodePage() {
         try {
           const solutions = JSON.parse(savedSolutions)
           if (solutions[problemId]) {
-            codeRef.current = solutions[problemId]
+            const savedCode = solutions[problemId]
+            setCode(savedCode)
+            codeRef.current = savedCode
             setSolutionSaved(true)
           }
         } catch (error) {
@@ -87,13 +93,17 @@ export default function CodePage() {
     toast.info(`Running your code against ${problem.examples.length} test case(s)...`)
     
     try {
-      await runCodeMultiple(problem.examples, code, languageId)
+      const testCases = problem.examples.map((example) => ({
+        input: example.input,
+        expectedOutput: example.output
+      }))
+      await runCodeMultiple(testCases, code, languageId, problemId || '')
       toast.success("Code executed successfully!")
     } catch (error) {
       console.error("Run error:", error)
       toast.error("Failed to run code. Please try again.")
     }
-  }, [code, languageId, runCodeMultiple, setActiveTab, problem])
+  }, [code, languageId, runCodeMultiple, setActiveTab, problem, problemId])
 
   const handleSubmit = useCallback(async () => {
     if (!user) {
@@ -160,10 +170,12 @@ export default function CodePage() {
     setActiveTab("testcases")
   }, [])
 
-  // Update code and language refs
-  const handleCodeChange = useCallback((code: string, languageId: number) => {
-    codeRef.current = code
-    languageRef.current = languageId
+  // Update code and language state and refs
+  const handleCodeChange = useCallback((newCode: string, newLanguageId: number) => {
+    setCode(newCode)
+    setLanguageId(newLanguageId)
+    codeRef.current = newCode
+    languageRef.current = newLanguageId
     
     // Mark solution as not saved when code changes in assignment context
     if (isAssignmentContext && solutionSaved) {
