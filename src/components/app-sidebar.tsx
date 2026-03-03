@@ -11,6 +11,7 @@ import {
   Settings,
   HelpCircle,
   Users,
+  GraduationCap,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Logo } from "@/components/logo"
@@ -49,6 +50,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {
         label: "Apps",
         items: [
+          {
+            title: "Your Courses",
+            url: "/courses",
+            icon: GraduationCap,
+          },
           {
             title: "Mail",
             url: "/mail",

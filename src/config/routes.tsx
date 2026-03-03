@@ -13,6 +13,11 @@ const Calendar = lazy(() => import('@/app/calendar/page'))
 const Users = lazy(() => import('@/app/users/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const CodePage = lazy(() => import('@/app/code/page'))
+const CoursesPage = lazy(() => import('@/app/courses/page'))
+
+// Course assignment pages
+const CourseAssignmentsPage = lazy(() => import('@/app/courses/[courseId]/assignments/page'))
+const AssignmentDetailPage = lazy(() => import('@/app/courses/[courseId]/assignments/[assignmentId]/page'))
 
 // Auth pages
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
@@ -62,6 +67,10 @@ export const routes: RouteConfig[] = [
 
   // Application Routes
   {
+    path: "/courses",
+    element: <ProtectedRoute><CoursesPage /></ProtectedRoute>
+  },
+  {
     path: "/mail",
     element: <ProtectedRoute><Mail /></ProtectedRoute>
   },
@@ -80,6 +89,16 @@ export const routes: RouteConfig[] = [
   {
     path: "/code",
     element: <ProtectedRoute><CodePage /></ProtectedRoute>
+  },
+
+  // Course Assignment Routes
+  {
+    path: "/courses/:courseId/assignments",
+    element: <ProtectedRoute><CourseAssignmentsPage /></ProtectedRoute>
+  },
+  {
+    path: "/courses/:courseId/assignments/:assignmentId",
+    element: <ProtectedRoute><AssignmentDetailPage /></ProtectedRoute>
   },
 
   // Content Pages

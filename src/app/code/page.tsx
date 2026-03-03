@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useSearchParams, useNavigate } from "react-router-dom"
 import { useProblem } from "@/hooks/api/use-problems"
 import { useCodeExecution, useCodeSubmission, useSubmission } from "@/hooks/api/use-submissions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ProblemStatement } from "./components/problem-statement"
 import { CodeEditor } from "./components/code-editor"
 import { TestCases } from "./components/test-cases"
-import { Code2, TestTube, Play, Square, Zap, Plus, FileText, History } from "lucide-react"
+import { Code2, TestTube, Play, Square, Zap, Plus, FileText, History, ArrowLeft, Save } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { PanelResizeHandle, PanelGroup, Panel } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,10 @@ import { useAuth } from "@/contexts/auth-context"
 
 export default function CodePage() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const problemId = searchParams.get('id')
+  const assignmentId = searchParams.get('assignment')
+  const courseId = searchParams.get('course')
   const { user } = useAuth()
   const { problem, loading: problemLoading, error: problemError } = useProblem(problemId)
   const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading } = useCodeExecution()
@@ -27,10 +30,32 @@ export default function CodePage() {
   const [leftPanelSize, setLeftPanelSize] = useState(45)
   const [rightPanelSize, setRightPanelSize] = useState(55)
   const [problemTab, setProblemTab] = useState<"description" | "submissions">("description")
+  const [solutionSaved, setSolutionSaved] = useState(false)
   
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
   const [languageId, setLanguageId] = useState(71) // Default to Python
+
+  // Check if this is an assignment context
+  const isAssignmentContext = Boolean(assignmentId && courseId)
+
+  // Load saved solution for assignment context
+  useEffect(() => {
+    if (isAssignmentContext && problemId) {
+      const savedSolutions = localStorage.getItem(`assignment_${assignmentId}_solutions`)
+      if (savedSolutions) {
+        try {
+          const solutions = JSON.parse(savedSolutions)
+          if (solutions[problemId]) {
+            codeRef.current = solutions[problemId]
+            setSolutionSaved(true)
+          }
+        } catch (error) {
+          console.error('Error loading saved solution:', error)
+        }
+      }
+    }
+  }, [isAssignmentContext, assignmentId, problemId])
 
   // Poll for submission results when a submission is made
   useEffect(() => {
@@ -103,15 +128,48 @@ export default function CodePage() {
     }
   }, [user, problemId, code, languageId, submitCode, setActiveTab])
 
+  const handleSaveAssignmentSolution = useCallback(() => {
+    if (!isAssignmentContext || !problemId) return
+
+    try {
+      // Get existing solutions
+      const savedSolutions = localStorage.getItem(`assignment_${assignmentId}_solutions`)
+      const solutions = savedSolutions ? JSON.parse(savedSolutions) : {}
+      
+      // Update solution for current problem
+      solutions[problemId] = codeRef.current
+      
+      // Save back to localStorage
+      localStorage.setItem(`assignment_${assignmentId}_solutions`, JSON.stringify(solutions))
+      
+      setSolutionSaved(true)
+      toast.success("Solution saved successfully")
+    } catch (error) {
+      console.error('Error saving solution:', error)
+      toast.error("Failed to save solution")
+    }
+  }, [isAssignmentContext, assignmentId, problemId])
+
+  const handleBackToAssignment = useCallback(() => {
+    if (assignmentId && courseId) {
+      navigate(`/courses/${courseId}/assignments/${assignmentId}`)
+    }
+  }, [navigate, assignmentId, courseId])
+
   const handleAddTest = useCallback(() => {
     setActiveTab("testcases")
   }, [])
 
-  // Update code and language state
-  const handleCodeChange = useCallback((newCode: string, newLanguageId: number) => {
-    setCode(newCode)
-    setLanguageId(newLanguageId)
-  }, [])
+  // Update code and language refs
+  const handleCodeChange = useCallback((code: string, languageId: number) => {
+    codeRef.current = code
+    languageRef.current = languageId
+    
+    // Mark solution as not saved when code changes in assignment context
+    if (isAssignmentContext && solutionSaved) {
+      setSolutionSaved(false)
+    }
+  }, [isAssignmentContext, solutionSaved])
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -286,14 +344,38 @@ export default function CodePage() {
                             </>
                           )}
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSubmit}
-                          className="h-8 px-4 text-xs bg-primary text-white shadow-lg shadow-violet-600/20 font-semibold"
-                        >
-                          <Zap className="h-3.5 w-3.5 mr-1.5" />
-                          Submit
-                        </Button>
+                        
+                        {isAssignmentContext ? (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={handleSaveAssignmentSolution}
+                              variant={solutionSaved ? "secondary" : "default"}
+                              className="h-8 px-4 text-xs font-semibold"
+                            >
+                              <Save className="h-3.5 w-3.5 mr-1.5" />
+                              {solutionSaved ? "Saved" : "Save Solution"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleBackToAssignment}
+                              variant="outline"
+                              className="h-8 px-4 text-xs font-semibold"
+                            >
+                              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                              Back
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={handleSubmit}
+                            className="h-8 px-4 text-xs bg-primary text-white shadow-lg shadow-violet-600/20 font-semibold"
+                          >
+                            <Zap className="h-3.5 w-3.5 mr-1.5" />
+                            Submit
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
