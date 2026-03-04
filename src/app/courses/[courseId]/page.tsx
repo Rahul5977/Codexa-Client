@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   Table,
   TableBody,
@@ -58,9 +59,7 @@ export default function CourseDetailsPage() {
       // Fetch assignments and students in parallel
       const [assignmentsResponse, studentsResponse] = await Promise.all([
         assignmentService.getClassroomAssignments(courseId).catch(() => ({ items: [], totalItems: 0, currentPage: 1, pageSize: 10, totalPages: 0, hasNextPage: false, hasPrevPage: false })),
-        classroomData.isTeacher 
-          ? classroomService.getClassroomStudents(courseId).catch(() => ({ students: [], totalStudents: 0 }))
-          : Promise.resolve({ students: [], totalStudents: 0 })
+        classroomService.getClassroomStudents(courseId).catch(() => ({ students: [], totalStudents: 0 }))
       ])
 
       setAssignments(assignmentsResponse.items || [])
@@ -194,12 +193,10 @@ export default function CourseDetailsPage() {
                 <FileText className="mr-2 h-4 w-4" />
                 Assignments ({assignments.length})
               </TabsTrigger>
-              {classroom.isTeacher && (
-                <TabsTrigger value="students">
-                  <Users className="mr-2 h-4 w-4" />
-                  Students ({students.length})
-                </TabsTrigger>
-              )}
+              <TabsTrigger value="students">
+                <Users className="mr-2 h-4 w-4" />
+                Students ({students.length})
+              </TabsTrigger>
             </TabsList>
             {activeTab === "assignments" && classroom.isTeacher && (
               <Button onClick={() => navigate(`/courses/${courseId}/assignments/create`)}>
@@ -263,69 +260,86 @@ export default function CourseDetailsPage() {
           </TabsContent>
 
           {/* Students Tab */}
-          {classroom.isTeacher && (
-            <TabsContent value="students" className="space-y-4">
-              {students.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-12">
-                    <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No students enrolled</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Share the classroom code with students to let them join
-                    </p>
+          <TabsContent value="students" className="space-y-4">
+            {students.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Users className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No students enrolled</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {classroom.isTeacher
+                      ? "Share the classroom code with students to let them join"
+                      : "Be the first to join this classroom"}
+                  </p>
+                  {classroom.isTeacher && (
                     <Badge variant="outline" className="mt-4 text-lg px-4 py-2">
                       Code: {classroom.code}
                     </Badge>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Rating</TableHead>
-                          <TableHead>Problems Solved</TableHead>
-                          <TableHead>Joined</TableHead>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Problems Solved</TableHead>
+                        <TableHead>Joined</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {students.map((student) => (
+                        <TableRow key={student.id}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={student.image_url} alt={student.name} />
+                                <AvatarFallback>
+                                  {student.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .toUpperCase()
+                                    .slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{student.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Mail className="mr-2 h-3 w-3 text-muted-foreground" />
+                              {student.email}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{student.currentRating}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2 text-sm">
+                              <span className="text-green-600">{student.easyCount}E</span>
+                              <span className="text-yellow-600">{student.mediumCount}M</span>
+                              <span className="text-red-600">{student.hardCount}H</span>
+                              <span className="text-muted-foreground">
+                                ({student.totalSolved} total)
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(student.joinedAt)}
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {students.map((student) => (
-                          <TableRow key={student.id}>
-                            <TableCell className="font-medium">{student.name}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <Mail className="mr-2 h-3 w-3 text-muted-foreground" />
-                                {student.email}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{student.currentRating}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center space-x-2 text-sm">
-                                <span className="text-green-600">{student.easyCount}E</span>
-                                <span className="text-yellow-600">{student.mediumCount}M</span>
-                                <span className="text-red-600">{student.hardCount}H</span>
-                                <span className="text-muted-foreground">
-                                  ({student.totalSolved} total)
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {formatDate(student.joinedAt)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          )}
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </BaseLayout>

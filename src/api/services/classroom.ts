@@ -39,6 +39,7 @@ export interface Student {
   id: string
   name: string
   email: string
+  image_url?: string
   currentRating: number
   totalSolved: number
   easyCount: number

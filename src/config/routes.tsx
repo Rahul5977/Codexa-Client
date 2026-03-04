@@ -16,7 +16,7 @@ const CodePage = lazy(() => import('@/app/code/page'))
 const CoursesPage = lazy(() => import('@/app/courses/page'))
 
 // Course assignment pages
-const CourseAssignmentsPage = lazy(() => import('@/app/courses/[courseId]/assignments/page'))
+const CourseAssignmentsPage = lazy(() => import('@/app/courses/[courseId]/page'))
 const AssignmentDetailPage = lazy(() => import('@/app/courses/[courseId]/assignments/[assignmentId]/page'))
 
 // Auth pages
