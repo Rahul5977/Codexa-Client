@@ -47,16 +47,14 @@ export default function CoursesPage() {
 
   const handleCreateCourse = async (data: { name: string; description?: string; imageUrl?: string }) => {
     try {
-      const newCourse = await classroomService.createClassroom(data)
-      setClassrooms(prev => ({
-        ...prev,
-        teaching: [newCourse, ...prev.teaching]
-      }))
+      await classroomService.createClassroom(data)
       setCreateModalOpen(false)
       toast({
         title: "Success",
         description: "Course created successfully",
       })
+      // Fetch updated classroom data from server
+      await fetchClassrooms()
     } catch (error) {
       console.error("Error creating course:", error)
       toast({
@@ -70,15 +68,13 @@ export default function CoursesPage() {
   const handleJoinCourse = async (data: { code: string }) => {
     try {
       const joinedCourse = await classroomService.joinClassroom(data)
-      setClassrooms(prev => ({
-        ...prev,
-        enrolled: [joinedCourse, ...prev.enrolled]
-      }))
       setJoinModalOpen(false)
       toast({
         title: "Success",
         description: `Joined ${joinedCourse.name} successfully`,
       })
+      // Fetch updated classroom data from server
+      await fetchClassrooms()
     } catch (error: any) {
       console.error("Error joining course:", error)
       toast({
@@ -227,14 +223,14 @@ export default function CoursesPage() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classrooms?.teaching?.map((course) => (
+              {(classrooms?.teaching || []).map((course, index) => (
                 <CourseCard
-                  key={course.id}
+                  key={course.id || `teaching-${index}`}
                   course={course}
                   isTeacher={true}
                   onDelete={handleDeleteCourse}
                 />
-              )) || []}
+              ))}
             </div>
           )}
         </TabsContent>
@@ -256,13 +252,13 @@ export default function CoursesPage() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classrooms?.enrolled?.map((course) => (
+              {(classrooms?.enrolled || []).map((course, index) => (
                 <CourseCard
-                  key={course.id}
+                  key={course.id || `enrolled-${index}`}
                   course={course}
                   isTeacher={false}
                 />
-              )) || []}
+              ))}
             </div>
           )}
         </TabsContent>

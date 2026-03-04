@@ -69,7 +69,7 @@ export class ClassroomService {
    */
   async getMyClassrooms(): Promise<ClassroomResponse> {
     const response = await apiClient.get(`${this.baseURL}/my-classrooms`)
-    return response.data.data
+    return response.data
   }
 
   /**
@@ -77,7 +77,7 @@ export class ClassroomService {
    */
   async getClassroomById(classroomId: string): Promise<Classroom> {
     const response = await apiClient.get(`${this.baseURL}/${classroomId}`)
-    return response.data.data.classroom
+    return response.data
   }
 
   /**
@@ -85,7 +85,7 @@ export class ClassroomService {
    */
   async createClassroom(data: CreateClassroomRequest): Promise<Classroom> {
     const response = await apiClient.post(`${this.baseURL}/create`, data)
-    return response.data.data.classroom
+    return response.data
   }
 
   /**
@@ -93,7 +93,7 @@ export class ClassroomService {
    */
   async joinClassroom(data: JoinClassroomRequest): Promise<Classroom> {
     const response = await apiClient.post(`${this.baseURL}/join`, data)
-    return response.data.data.classroom
+    return response.data
   }
 
   /**
@@ -101,7 +101,7 @@ export class ClassroomService {
    */
   async getClassroomStudents(classroomId: string): Promise<ClassroomStudentsResponse> {
     const response = await apiClient.get(`${this.baseURL}/${classroomId}/students`)
-    return response.data.data
+    return response.data
   }
 
   /**
@@ -109,7 +109,7 @@ export class ClassroomService {
    */
   async updateClassroom(classroomId: string, data: Partial<CreateClassroomRequest>): Promise<Classroom> {
     const response = await apiClient.put(`${this.baseURL}/${classroomId}`, data)
-    return response.data.data.classroom
+    return response.data
   }
 
   /**

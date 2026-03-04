@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
@@ -68,13 +68,8 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
   }
 
   const handleCourseClick = () => {
-    if (isTeacher) {
-      // Navigate to course management page for teachers
-      navigate(`/courses/${course.id}/manage`)
-    } else {
-      // Navigate to assignments page for students
-      navigate(`/courses/${course.id}/assignments`)
-    }
+    // Navigate to assignments page for both teachers and students
+    navigate(`/courses/${course.id}/assignments`)
   }
 
   return (
@@ -84,9 +79,9 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">
               <Avatar>
-                <AvatarImage src={course.imageUrl} alt={course.name} />
+                <AvatarImage src={course.imageUrl || undefined} alt={course.name || 'Course'} />
                 <AvatarFallback>
-                  {course.name.slice(0, 2).toUpperCase()}
+                  {course.name?.slice(0, 2).toUpperCase() || 'CO'}
                 </AvatarFallback>
               </Avatar>
               <div>
@@ -98,7 +93,7 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
                 )}
               </div>
             </div>
-            
+            {isTeacher && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -114,8 +109,6 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
                   <ExternalLink className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                {isTeacher && (
-                  <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />
@@ -128,16 +121,15 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
+            )}
           </div>
         </CardHeader>
 
         <CardContent className="space-y-3">
           {/* Course Code */}
-          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+          {isTeacher && <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
             <div>
               <p className="text-sm font-medium">Course Code</p>
               <p className="text-lg font-mono font-bold">{course.code}</p>
@@ -145,21 +137,31 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
             <Button variant="ghost" size="sm" onClick={copyCode}>
               <Copy className="h-4 w-4" />
             </Button>
-          </div>
+          </div>}
 
           {/* Course Stats */}
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <div className="flex items-center space-x-1">
               <Users className="h-4 w-4" />
-              <span>{course.studentCount} students</span>
+              <span>{course.studentCount || 0} students</span>
             </div>
             <div className="flex items-center space-x-1">
               <Calendar className="h-4 w-4" />
               <span>
-                {isTeacher 
-                  ? `Created ${format(new Date(course.createdAt), "MMM d, yyyy")}`
-                  : `Joined ${format(new Date(course.joinedAt!), "MMM d, yyyy")}`
-                }
+                {(() => {
+                  try {
+                    if (isTeacher && course.createdAt) {
+                      const date = new Date(course.createdAt)
+                      return !isNaN(date.getTime()) ? `Created ${format(date, "MMM d, yyyy")}` : 'Created recently'
+                    } else if (!isTeacher && course.joinedAt) {
+                      const date = new Date(course.joinedAt)
+                      return !isNaN(date.getTime()) ? `Joined ${format(date, "MMM d, yyyy")}` : 'Joined recently'
+                    }
+                    return isTeacher ? 'Created recently' : 'Joined recently'
+                  } catch (error) {
+                    return isTeacher ? 'Created recently' : 'Joined recently'
+                  }
+                })()}
               </span>
             </div>
           </div>
@@ -170,19 +172,13 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
               <div className="flex items-center space-x-2">
                 <Avatar className="h-6 w-6">
                   <AvatarFallback className="text-xs">
-                    {course.teacher.name.slice(0, 2).toUpperCase()}
+                    {course.teacher?.name?.slice(0, 2).toUpperCase() || 'T'}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm text-muted-foreground">
-                  {course.teacher.name}
+                  {course.teacher?.name || 'Teacher'}
                 </span>
               </div>
-              <Badge variant="secondary">Student</Badge>
-            </div>
-          )}
-
-          {isTeacher && (
-            <div className="flex justify-end">
               <Badge variant="default">Teacher</Badge>
             </div>
           )}
