@@ -22,6 +22,9 @@ class ApiClient {
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`
     const { headers = {}, params, timeout = this.timeout } = options
 
+    // Always get the latest token from localStorage
+    this.authToken = localStorage.getItem('accessToken')
+
     // Build query string from params
     const searchParams = new URLSearchParams()
     if (params) {

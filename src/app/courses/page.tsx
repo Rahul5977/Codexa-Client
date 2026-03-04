@@ -1,21 +1,19 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Plus, UserPlus, Users, Calendar, GraduationCap } from "lucide-react"
-import { classroomService, type ClassroomResponse, type Classroom } from "@/api/services/classroom"
-import { useAuth } from "@/contexts/auth-context"
+import { classroomService, type ClassroomResponse } from "@/api/services/classroom"
 import { CreateCourseModal } from "./components/create-course-modal"
 import { JoinCourseModal } from "./components/join-course-modal"
 import { CourseCard } from "./components/course-card"
+import { BaseLayout } from "@/components/layouts/base-layout"
 
 export default function CoursesPage() {
-  const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [classrooms, setClassrooms] = useState<ClassroomResponse>({ teaching: [], enrolled: [] })
@@ -30,12 +28,16 @@ export default function CoursesPage() {
     try {
       setLoading(true)
       const data = await classroomService.getMyClassrooms()
-      setClassrooms(data)
+      setClassrooms(data || { teaching: [], enrolled: [] })
     } catch (error) {
       console.error("Error fetching classrooms:", error)
+      // Keep the default empty state on error
+      setClassrooms({ teaching: [], enrolled: [] })
       toast({
         title: "Error",
-        description: "Failed to load classrooms",
+        description: error instanceof Error && error.message.includes("Invalid token") 
+          ? "Please login again to continue" 
+          : "Failed to load classrooms",
         variant: "destructive",
       })
     } finally {
@@ -110,38 +112,31 @@ export default function CoursesPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[400px] items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading courses...</span>
+      <BaseLayout>
+        <div className="flex h-[400px] items-center justify-center">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Loading courses...</span>
+          </div>
         </div>
-      </div>
+      </BaseLayout>
     )
   }
 
   return (
-    <div className="container mx-auto p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Your Courses</h1>
-            <p className="text-muted-foreground">
-              Manage your teaching courses and enrolled classes
-            </p>
-          </div>
-          <div className="flex space-x-2">
+    <BaseLayout title="Your Courses" description="Manage your teaching courses and enrolled classes">
+      <div className="px-4 lg:px-6">
+        {/* Action Buttons */}
+        <div className="mb-6 flex justify-end space-x-2">
             <Button onClick={() => setJoinModalOpen(true)} variant="outline">
               <UserPlus className="mr-2 h-4 w-4" />
               Join Course
             </Button>
-            <Button onClick={() => setCreateModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Course
-            </Button>
-          </div>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Course
+          </Button>
         </div>
-      </div>
 
       {/* Summary Cards */}
       <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -151,7 +146,7 @@ export default function CoursesPage() {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{classrooms.teaching.length}</div>
+            <div className="text-2xl font-bold">{classrooms?.teaching?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
               Courses you're teaching
             </p>
@@ -164,7 +159,7 @@ export default function CoursesPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{classrooms.enrolled.length}</div>
+            <div className="text-2xl font-bold">{classrooms?.enrolled?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
               Courses you're learning
             </p>
@@ -178,7 +173,7 @@ export default function CoursesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {classrooms.teaching.reduce((total, course) => total + course.studentCount, 0)}
+              {classrooms?.teaching?.reduce((total, course) => total + course.studentCount, 0) || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Across all your courses
@@ -193,7 +188,7 @@ export default function CoursesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {classrooms.teaching.length + classrooms.enrolled.length}
+              {(classrooms?.teaching?.length || 0) + (classrooms?.enrolled?.length || 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               All your courses
@@ -208,15 +203,15 @@ export default function CoursesPage() {
       <Tabs defaultValue="teaching" className="space-y-4">
         <TabsList>
           <TabsTrigger value="teaching">
-            Teaching ({classrooms.teaching.length})
+            Teaching ({classrooms?.teaching?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="enrolled">
-            Enrolled ({classrooms.enrolled.length})
+            Enrolled ({classrooms?.enrolled?.length || 0})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="teaching" className="space-y-4">
-          {classrooms.teaching.length === 0 ? (
+          {(classrooms?.teaching?.length || 0) === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <GraduationCap className="h-12 w-12 text-muted-foreground mb-4" />
@@ -232,20 +227,20 @@ export default function CoursesPage() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classrooms.teaching.map((course) => (
+              {classrooms?.teaching?.map((course) => (
                 <CourseCard
                   key={course.id}
                   course={course}
                   isTeacher={true}
                   onDelete={handleDeleteCourse}
                 />
-              ))}
+              )) || []}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="enrolled" className="space-y-4">
-          {classrooms.enrolled.length === 0 ? (
+          {(classrooms?.enrolled?.length || 0) === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Users className="h-12 w-12 text-muted-foreground mb-4" />
@@ -261,13 +256,13 @@ export default function CoursesPage() {
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classrooms.enrolled.map((course) => (
+              {classrooms?.enrolled?.map((course) => (
                 <CourseCard
                   key={course.id}
                   course={course}
                   isTeacher={false}
                 />
-              ))}
+              )) || []}
             </div>
           )}
         </TabsContent>
@@ -285,6 +280,7 @@ export default function CoursesPage() {
         onOpenChange={setJoinModalOpen}
         onSubmit={handleJoinCourse}
       />
-    </div>
+      </div>
+    </BaseLayout>
   )
 }
