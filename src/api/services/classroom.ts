@@ -17,6 +17,7 @@ export interface Classroom {
   createdAt: string
   updatedAt: string
   joinedAt?: string // for student enrollments
+  isTeacher?: boolean // indicates if the current user is the teacher
 }
 
 export interface CreateClassroomRequest {
@@ -77,7 +78,7 @@ export class ClassroomService {
    */
   async getClassroomById(classroomId: string): Promise<Classroom> {
     const response = await apiClient.get(`${this.baseURL}/${classroomId}`)
-    return response.data
+    return response.data.classroom
   }
 
   /**
