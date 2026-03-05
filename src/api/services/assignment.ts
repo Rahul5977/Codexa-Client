@@ -50,7 +50,7 @@ export interface AssignmentSubmission {
   id: string
   assignmentId: string
   studentId: string
-  solutions: Record<string, string> // problemId -> solution code
+  solutions: Record<string, { code: string; language: string }> // problemId -> solution
   submittedAt: Date
   grade?: number
   feedback?: string
@@ -74,7 +74,7 @@ export interface CreateAssignmentDto {
 
 export interface SubmitAssignmentDto {
   assignmentId: string
-  solutions: Record<string, string>
+  solutions: Record<string, { code: string; language: string }>
 }
 
 export interface AssignmentDraft {
@@ -197,9 +197,7 @@ export class AssignmentService {
     }
   }
 
-  async getAssignmentDrafts(
-    assignmentId: string
-  ): Promise<AssignmentDraft[]> {
+  async getAssignmentDrafts(assignmentId: string): Promise<AssignmentDraft[]> {
     const response = await apiClient.get(
       `${this.baseURL}/assignment/${assignmentId}/drafts`
     )
@@ -208,9 +206,7 @@ export class AssignmentService {
   }
 
   async deleteAssignmentDrafts(assignmentId: string): Promise<void> {
-    await apiClient.delete(
-      `${this.baseURL}/assignment/${assignmentId}/drafts`
-    )
+    await apiClient.delete(`${this.baseURL}/assignment/${assignmentId}/drafts`)
   }
 }
 

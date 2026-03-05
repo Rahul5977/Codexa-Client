@@ -243,10 +243,12 @@ export default function CourseDetailsPage() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-4 text-sm">
                         <div className="flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          Due: {formatDate(assignment.deadline)} at {formatTime(assignment.deadline)}
+                          <Clock className="mr-1 h-3 w-3 text-red-600" />
+                          <span className="font-bold text-red-600">
+                            Due: {formatDate(assignment.deadline)} at {formatTime(assignment.deadline)}
+                          </span>
                         </div>
                       </div>
                     </CardContent>

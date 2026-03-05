@@ -40,8 +40,16 @@ export default function AssignmentDetailPage() {
   const [submitting, setSubmitting] = useState(false)
   const [assignment, setAssignment] = useState<Assignment | null>(null)
   const [submission, setSubmission] = useState<AssignmentSubmission | null>(null)
-  const [solutions, setSolutions] = useState<Record<string, string>>({})
+  const [solutions, setSolutions] = useState<Record<string, { code: string; language: string }>>({})
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+
+  // Map Judge0 language IDs to language names
+  const LANGUAGE_ID_TO_NAME: Record<number, string> = {
+    54: "cpp",
+    62: "java",
+    63: "javascript",
+    71: "python",
+  }
 
   useEffect(() => {
     if (assignmentId) {
@@ -67,13 +75,16 @@ export default function AssignmentDetailPage() {
         setSolutions(submissionData.solutions)
       } else {
         // Initialize solutions from drafts if available, otherwise empty
-        const draftSolutions: Record<string, string> = {}
+        const draftSolutions: Record<string, { code: string; language: string }> = {}
 
         if (assignmentData.problems && Array.isArray(assignmentData.problems)) {
           assignmentData.problems.forEach(ap => {
             // Check if there's a draft for this problem
             const draft = drafts.find(d => d.problemId === ap.problemId)
-            draftSolutions[ap.problemId] = draft?.code || ''
+            draftSolutions[ap.problemId] = {
+              code: draft?.code || '',
+              language: LANGUAGE_ID_TO_NAME[draft?.languageId || 71] || 'python'
+            }
           })
         }
 
@@ -91,12 +102,41 @@ export default function AssignmentDetailPage() {
     }
   }
 
-  const handleProblemClick = (problemId: string) => {
-    navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`)
+  const handleProblemClick = (problemId: string, viewSubmission = false) => {
+    if (viewSubmission && submission) {
+      // Navigate to code editor with submission data
+      const solution = submission.solutions[problemId]
+      if (solution) {
+        navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}&viewSubmission=true`)
+      }
+    } else {
+      // Navigate to code editor for solving/editing
+      navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`)
+    }
   }
 
   const handleGoBack = () => {
     navigate(`/courses/${courseId}/assignments`)
+  }
+
+  const handleResubmit = async () => {
+    if (!assignmentId) return
+
+    try {
+      // Delete the existing submission by setting solutions to empty drafts
+      setSubmission(null)
+      toast({
+        title: "Ready to Resubmit",
+        description: "You can now edit and resubmit your assignment.",
+      })
+    } catch (error) {
+      console.error("Error preparing resubmission:", error)
+      toast({
+        title: "Error",
+        description: "Failed to prepare resubmission. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleSubmit = async () => {
@@ -207,10 +247,12 @@ export default function AssignmentDetailPage() {
                 <p className="text-muted-foreground mb-4">{assignment.description}</p>
               )}
 
-              <div className="flex items-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-6 text-sm">
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>Due: {assignment.deadline ? format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a") : 'No deadline'}</span>
+                  <Calendar className="h-4 w-4 text-red-600" />
+                  <span className="font-bold text-red-600">
+                    Due: {assignment.deadline ? format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a") : 'No deadline'}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -227,24 +269,31 @@ export default function AssignmentDetailPage() {
         <div className="grid gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold">Problems</h2>
-            {canSubmit && (
-              <Button onClick={() => setShowSubmitDialog(true)} size="lg">
-                <Send className="mr-2 h-4 w-4" />
-                Submit Assignment
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {submission && !isOverdue && (
+                <Button onClick={handleResubmit} variant="outline" size="lg">
+                  <Code className="mr-2 h-4 w-4" />
+                  Resubmit Assignment
+                </Button>
+              )}
+              {canSubmit && (
+                <Button onClick={() => setShowSubmitDialog(true)} size="lg">
+                  <Send className="mr-2 h-4 w-4" />
+                  Submit Assignment
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4">
             {assignment.problems?.map((assignmentProblem, index) => {
               const problem = assignmentProblem.problem
-              const hasSolution = solutions[problem.id] && solutions[problem.id].trim() !== ''
+              const hasSolution = solutions[problem.id] && solutions[problem.id].code.trim() !== ''
 
               return (
                 <Card
                   key={assignmentProblem.id}
-                  className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleProblemClick(problem.id)}
+                  className="hover:shadow-md transition-shadow"
                 >
                   <CardHeader>
                     <div className="flex items-start justify-between">
@@ -275,21 +324,51 @@ export default function AssignmentDetailPage() {
                   <CardContent>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Code className="h-4 w-4" />
-                          <span>View problem details</span>
-                        </div>
-                        {hasSolution && (
+                        {submission ? (
                           <Badge variant="secondary" className="gap-1">
                             <CheckCircle className="h-3 w-3" />
-                            Solution Saved
+                            Submitted
                           </Badge>
+                        ) : hasSolution ? (
+                          <Badge variant="secondary" className="gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Draft Saved
+                          </Badge>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Code className="h-4 w-4" />
+                            <span>Not started</span>
+                          </div>
                         )}
                       </div>
-                      <Button variant="outline">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Solve Problem
-                      </Button>
+                      <div className="flex gap-2">
+                        {submission && (
+                          <Button
+                            variant="outline"
+                            onClick={() => handleProblemClick(problem.id, true)}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Submission
+                          </Button>
+                        )}
+                        {!submission && (
+                          <Button
+                            variant="outline"
+                            onClick={() => handleProblemClick(problem.id, false)}
+                          >
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            {hasSolution ? 'Continue' : 'Solve Problem'}
+                          </Button>
+                        )}
+                        {submission && !isOverdue && (
+                          <Button
+                            onClick={() => handleProblemClick(problem.id, false)}
+                          >
+                            <Code className="mr-2 h-4 w-4" />
+                            Edit Solution
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -312,6 +391,12 @@ export default function AssignmentDetailPage() {
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Submitted At</div>
                   <div>{format(new Date(submission.submittedAt), "MMM d, yyyy 'at' h:mm a")}</div>
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-muted-foreground">Deadline</div>
+                  <div className="font-bold text-red-600">
+                    {assignment.deadline ? format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a") : 'No deadline'}
+                  </div>
                 </div>
                 {submission.grade !== null && (
                   <div>
@@ -345,7 +430,7 @@ export default function AssignmentDetailPage() {
             <div className="text-sm font-medium mb-2">Solutions Summary:</div>
             <div className="space-y-2">
               {assignment.problems.map((ap, index) => {
-                const hasSolution = solutions[ap.problemId] && solutions[ap.problemId].trim() !== ''
+                const hasSolution = solutions[ap.problemId] && solutions[ap.problemId].code.trim() !== ''
                 return (
                   <div key={ap.id} className="flex items-center gap-2 text-sm">
                     {hasSolution ? (

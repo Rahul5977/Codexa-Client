@@ -36,6 +36,7 @@ export default function CodePage() {
   const problemId = searchParams.get('id')
   const assignmentId = searchParams.get('assignment')
   const courseId = searchParams.get('course')
+  const viewSubmission = searchParams.get('viewSubmission') === 'true'
   const { user } = useAuth()
   const { problem, loading: problemLoading, error: problemError } = useProblem(problemId)
   const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading } = useCodeExecution()
@@ -48,6 +49,7 @@ export default function CodePage() {
   const [problemTab, setProblemTab] = useState<"description" | "submissions" | "hints">("description")
   const [solutionSaved, setSolutionSaved] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
+  const [isViewingSubmission, setIsViewingSubmission] = useState(false)
 
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
@@ -58,13 +60,53 @@ export default function CodePage() {
   const codeRef = useRef(code)
   const languageRef = useRef(languageId)
 
+  // Map language names to Judge0 IDs
+  const LANGUAGE_NAME_TO_ID: Record<string, number> = {
+    "cpp": 54,
+    "java": 62,
+    "javascript": 63,
+    "python": 71,
+    "c": 50,
+    "ruby": 72,
+    "rust": 73,
+    "typescript": 74,
+    "kotlin": 78,
+    "go": 60,
+  }
+
   // Check if this is an assignment context
   const isAssignmentContext = Boolean(assignmentId && courseId)
+
+  // Load submitted code when viewing a submission
+  useEffect(() => {
+    const loadSubmission = async () => {
+      if (viewSubmission && isAssignmentContext && problemId && assignmentId) {
+        try {
+          const submissionData = await assignmentService.getMySubmission(assignmentId)
+          if (submissionData && submissionData.solutions[problemId]) {
+            const solution = submissionData.solutions[problemId]
+            setCode(solution.code)
+            codeRef.current = solution.code
+            const langId = LANGUAGE_NAME_TO_ID[solution.language] || 71
+            setLanguageId(langId)
+            languageRef.current = langId
+            setIsViewingSubmission(true)
+            toast.success("Viewing your submitted solution")
+          }
+        } catch (error) {
+          console.error('Error loading submission:', error)
+          toast.error("Failed to load submission")
+        }
+      }
+    }
+
+    loadSubmission()
+  }, [viewSubmission, isAssignmentContext, assignmentId, problemId])
 
   // Load saved draft for assignment context from API
   useEffect(() => {
     const loadDraft = async () => {
-      if (isAssignmentContext && problemId && assignmentId) {
+      if (isAssignmentContext && problemId && assignmentId && !viewSubmission) {
         try {
           const draft = await assignmentService.getDraft(assignmentId, problemId)
           if (draft) {
@@ -82,7 +124,7 @@ export default function CodePage() {
     }
 
     loadDraft()
-  }, [isAssignmentContext, assignmentId, problemId])
+  }, [isAssignmentContext, assignmentId, problemId, viewSubmission])
 
   // No longer loading initial code from problem codeStubs - users write from scratch
   useEffect(() => {
@@ -468,14 +510,38 @@ export default function CodePage() {
                     </div>
                   </div>
 
-                  <TabsContent value="code" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
-                    <CodeEditor
-                      problem={problem}
-                      loading={problemLoading}
-                      onCodeChange={handleCodeChange}
-                      initialCode={code}
-                      initialLanguage={LANGUAGE_ID_TO_STUB_KEY[languageId] || "python"}
-                    />
+                  <TabsContent value="code" className={cn("flex-1 m-0 flex flex-col", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
+                    {isViewingSubmission && (
+                      <div className="bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800 px-4 py-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            Viewing Submitted Solution
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setIsViewingSubmission(false)
+                            navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`)
+                          }}
+                          className="h-7 text-xs"
+                        >
+                          <Code2 className="h-3 w-3 mr-1" />
+                          Edit Solution
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex-1 overflow-hidden">
+                      <CodeEditor
+                        problem={problem}
+                        loading={problemLoading}
+                        onCodeChange={handleCodeChange}
+                        initialCode={code}
+                        initialLanguage={LANGUAGE_ID_TO_STUB_KEY[languageId] || "python"}
+                      />
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="testcases" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
