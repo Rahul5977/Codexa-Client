@@ -16,9 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { 
-  Loader2, 
-  Clock, 
+import {
+  Loader2,
+  Clock,
   Calendar,
   FileText,
   ArrowLeft,
@@ -38,7 +38,7 @@ export default function AssignmentDetailPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { toast } = useToast()
-  
+
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [assignment, setAssignment] = useState<Assignment | null>(null)
@@ -61,10 +61,10 @@ export default function AssignmentDetailPage() {
         assignmentService.getAssignmentById(assignmentId),
         assignmentService.getMySubmission(assignmentId)
       ])
-      
+
       setAssignment(assignmentData)
       setSubmission(submissionData)
-      
+
       if (submissionData) {
         setSolutions(submissionData.solutions)
       } else {
@@ -98,7 +98,7 @@ export default function AssignmentDetailPage() {
   const handleSubmit = async () => {
     if (!assignmentId || !assignment) return
 
-    if (isAfter(new Date(), new Date(assignment.endDate))) {
+    if (isAfter(new Date(), new Date(assignment.deadline))) {
       toast({
         title: "Assignment Overdue",
         description: "This assignment deadline has passed.",
@@ -113,12 +113,12 @@ export default function AssignmentDetailPage() {
         assignmentId,
         solutions
       })
-      
+
       toast({
         title: "Assignment Submitted",
         description: "Your assignment has been submitted successfully.",
       })
-      
+
       // Refresh data to show submission status
       await fetchAssignmentData()
       setShowSubmitDialog(false)
@@ -134,7 +134,7 @@ export default function AssignmentDetailPage() {
     }
   }
 
-  const isOverdue = assignment && isAfter(new Date(), new Date(assignment.endDate))
+  const isOverdue = assignment && isAfter(new Date(), new Date(assignment.deadline))
   const canSubmit = assignment && !isOverdue && !submission
 
   if (loading) {
@@ -176,11 +176,11 @@ export default function AssignmentDetailPage() {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Assignments
           </Button>
-          
+
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">{assignment.name}</h1>
+                <h1 className="text-3xl font-bold">{assignment.title}</h1>
                 {submission ? (
                   <Badge variant="default">
                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -198,15 +198,15 @@ export default function AssignmentDetailPage() {
                   </Badge>
                 )}
               </div>
-              
+
               {assignment.description && (
                 <p className="text-muted-foreground mb-4">{assignment.description}</p>
               )}
-              
+
               <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  <span>Due: {format(new Date(assignment.endDate), "MMM d, yyyy 'at' h:mm a")}</span>
+                  <span>Due: {format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a")}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
@@ -237,7 +237,7 @@ export default function AssignmentDetailPage() {
               const hasSolution = solutions[problem.id] && solutions[problem.id].trim() !== ''
 
               return (
-                <Card 
+                <Card
                   key={assignmentProblem.id}
                   className="hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => handleProblemClick(problem.id)}
@@ -256,10 +256,10 @@ export default function AssignmentDetailPage() {
                         </CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge 
+                        <Badge
                           variant={
                             problem.difficulty === 'EASY' ? 'secondary' :
-                            problem.difficulty === 'MEDIUM' ? 'default' : 'destructive'
+                              problem.difficulty === 'MEDIUM' ? 'default' : 'destructive'
                           }
                         >
                           {problem.difficulty}
@@ -350,7 +350,7 @@ export default function AssignmentDetailPage() {
               Are you sure you want to submit this assignment? You won't be able to make changes after submission.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4">
             <div className="text-sm font-medium mb-2">Solutions Summary:</div>
             <div className="space-y-2">
@@ -372,7 +372,7 @@ export default function AssignmentDetailPage() {
               })}
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowSubmitDialog(false)}>
               Cancel

@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,11 +17,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useToast } from "@/hooks/use-toast"
-import { 
-  Loader2, 
-  ArrowLeft, 
-  Users, 
-  GraduationCap, 
+import {
+  Loader2,
+  ArrowLeft,
+  Users,
+  GraduationCap,
   Calendar,
   FileText,
   Mail,
@@ -58,11 +58,11 @@ export default function CourseDetailsPage() {
 
       // Fetch assignments and students in parallel
       const [assignmentsResponse, studentsResponse] = await Promise.all([
-        assignmentService.getClassroomAssignments(courseId).catch(() => ({ items: [], totalItems: 0, currentPage: 1, pageSize: 10, totalPages: 0, hasNextPage: false, hasPrevPage: false })),
+        assignmentService.getClassroomAssignments(courseId).catch(() => ({ assignments: [] })),
         classroomService.getClassroomStudents(courseId).catch(() => ({ students: [], totalStudents: 0 }))
       ])
 
-      setAssignments(assignmentsResponse.items || [])
+      setAssignments(assignmentsResponse.assignments || [])
       setStudents(studentsResponse.students || [])
     } catch (error: any) {
       console.error("Error fetching classroom details:", error)
@@ -231,7 +231,7 @@ export default function CourseDetailsPage() {
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle>{assignment.name}</CardTitle>
+                          <CardTitle>{assignment.title}</CardTitle>
                           <CardDescription className="mt-1">
                             {assignment.description}
                           </CardDescription>
@@ -245,11 +245,7 @@ export default function CourseDetailsPage() {
                       <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center">
                           <Clock className="mr-1 h-3 w-3" />
-                          Start: {formatDate(assignment.startDate)} at {formatTime(assignment.startDate)}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          Due: {formatDate(assignment.endDate)} at {formatTime(assignment.endDate)}
+                          Due: {formatDate(assignment.deadline)} at {formatTime(assignment.deadline)}
                         </div>
                       </div>
                     </CardContent>

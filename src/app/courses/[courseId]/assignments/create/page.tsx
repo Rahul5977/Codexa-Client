@@ -38,10 +38,10 @@ export default function CreateAssignmentPage() {
     const [loading, setLoading] = useState(false)
     const [loadingProblems, setLoadingProblems] = useState(true)
     const [formData, setFormData] = useState({
-        name: "",
+        title: "",
+        subtitle: "",
         description: "",
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
     const [problems, setProblems] = useState<ProblemInput[]>([])
     const [allProblems, setAllProblems] = useState<Problem[]>([])
@@ -149,10 +149,10 @@ export default function CreateAssignmentPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!formData.name.trim()) {
+        if (!formData.title.trim()) {
             toast({
                 title: "Error",
-                description: "Please enter an assignment name",
+                description: "Please enter an assignment title",
                 variant: "destructive",
             })
             return
@@ -167,35 +167,28 @@ export default function CreateAssignmentPage() {
             return
         }
 
-        if (formData.startDate >= formData.endDate) {
-            toast({
-                title: "Error",
-                description: "End date must be after start date",
-                variant: "destructive",
-            })
-            return
-        }
-
         try {
             setLoading(true)
 
             const assignmentData: CreateAssignmentDto = {
-                name: formData.name,
-                description: formData.description || "",
-                startDate: formData.startDate,
-                endDate: formData.endDate,
-                classroomId: courseId as string,
-                problemIds: problems.map(p => p.problemId),
+                title: formData.title,
+                subtitle: formData.subtitle || undefined,
+                description: formData.description || undefined,
+                deadline: formData.deadline,
+                problems: problems.map((p, index) => ({
+                    problemId: p.problemId,
+                    order: index + 1,
+                })),
             }
 
-            await assignmentService.createAssignment(assignmentData)
+            await assignmentService.createAssignment(courseId as string, assignmentData)
 
             toast({
                 title: "Success",
                 description: "Assignment created successfully",
             })
 
-            navigate(`/courses/${courseId}`)
+            navigate(`/courses/${courseId}/assignments`)
         } catch (error: any) {
             console.error("Error creating assignment:", error)
             toast({
@@ -213,7 +206,7 @@ export default function CreateAssignmentPage() {
             <div className="py-6 px-4 lg:px-6">
                 <Button
                     variant="ghost"
-                    onClick={() => navigate(`/courses/${courseId}`)}
+                    onClick={() => navigate(`/courses/${courseId}/assignments`)}
                     className="mb-4"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -232,17 +225,30 @@ export default function CreateAssignmentPage() {
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleSubmit} className="space-y-4">
-                                    {/* Assignment Name */}
+                                    {/* Assignment Title */}
                                     <div className="space-y-2">
-                                        <Label htmlFor="name">Name *</Label>
+                                        <Label htmlFor="title">Title *</Label>
                                         <Input
-                                            id="name"
+                                            id="title"
                                             placeholder="e.g., Week 1 - Arrays"
-                                            value={formData.name}
+                                            value={formData.title}
                                             onChange={(e) =>
-                                                setFormData({ ...formData, name: e.target.value })
+                                                setFormData({ ...formData, title: e.target.value })
                                             }
                                             required
+                                        />
+                                    </div>
+
+                                    {/* Subtitle */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="subtitle">Subtitle</Label>
+                                        <Input
+                                            id="subtitle"
+                                            placeholder="e.g., Data Structures Practice"
+                                            value={formData.subtitle}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, subtitle: e.target.value })
+                                            }
                                         />
                                     </div>
 
@@ -260,21 +266,21 @@ export default function CreateAssignmentPage() {
                                         />
                                     </div>
 
-                                    {/* Start Date */}
+                                    {/* Deadline */}
                                     <div className="space-y-2">
-                                        <Label>Start Date *</Label>
+                                        <Label>Deadline *</Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <Button
                                                     variant="outline"
                                                     className={cn(
                                                         "w-full justify-start text-left font-normal",
-                                                        !formData.startDate && "text-muted-foreground"
+                                                        !formData.deadline && "text-muted-foreground"
                                                     )}
                                                 >
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {formData.startDate ? (
-                                                        format(formData.startDate, "PPP")
+                                                    {formData.deadline ? (
+                                                        format(formData.deadline, "PPP")
                                                     ) : (
                                                         <span>Pick a date</span>
                                                     )}
@@ -283,42 +289,9 @@ export default function CreateAssignmentPage() {
                                             <PopoverContent className="w-auto p-0" align="start">
                                                 <Calendar
                                                     mode="single"
-                                                    selected={formData.startDate}
+                                                    selected={formData.deadline}
                                                     onSelect={(date) =>
-                                                        date && setFormData({ ...formData, startDate: date })
-                                                    }
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-
-                                    {/* End Date */}
-                                    <div className="space-y-2">
-                                        <Label>End Date *</Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant="outline"
-                                                    className={cn(
-                                                        "w-full justify-start text-left font-normal",
-                                                        !formData.endDate && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {formData.endDate ? (
-                                                        format(formData.endDate, "PPP")
-                                                    ) : (
-                                                        <span>Pick a date</span>
-                                                    )}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={formData.endDate}
-                                                    onSelect={(date) =>
-                                                        date && setFormData({ ...formData, endDate: date })
+                                                        date && setFormData({ ...formData, deadline: date })
                                                     }
                                                     initialFocus
                                                 />
@@ -382,7 +355,7 @@ export default function CreateAssignmentPage() {
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() => navigate(`/courses/${courseId}`)}
+                                            onClick={() => navigate(`/courses/${courseId}/assignments`)}
                                             disabled={loading}
                                             className="w-full"
                                         >
