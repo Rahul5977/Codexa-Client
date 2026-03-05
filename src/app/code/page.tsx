@@ -14,6 +14,7 @@ import { PanelResizeHandle, PanelGroup, Panel } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
+import { assignmentService } from "@/api/services/assignment"
 
 // Map Judge0 language IDs to code stub keys
 const LANGUAGE_ID_TO_STUB_KEY: Record<number, string> = {
@@ -51,6 +52,7 @@ export default function CodePage() {
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
   const [languageId, setLanguageId] = useState(71) // Default to Python
+  const [savedDraft, setSavedDraft] = useState<{ code: string; languageId: number } | null>(null)
 
   // Refs for assignment context
   const codeRef = useRef(code)
@@ -59,24 +61,27 @@ export default function CodePage() {
   // Check if this is an assignment context
   const isAssignmentContext = Boolean(assignmentId && courseId)
 
-  // Load saved solution for assignment context
+  // Load saved draft for assignment context from API
   useEffect(() => {
-    if (isAssignmentContext && problemId) {
-      const savedSolutions = localStorage.getItem(`assignment_${assignmentId}_solutions`)
-      if (savedSolutions) {
+    const loadDraft = async () => {
+      if (isAssignmentContext && problemId && assignmentId) {
         try {
-          const solutions = JSON.parse(savedSolutions)
-          if (solutions[problemId]) {
-            const savedCode = solutions[problemId]
-            setCode(savedCode)
-            codeRef.current = savedCode
+          const draft = await assignmentService.getDraft(assignmentId, problemId)
+          if (draft) {
+            setCode(draft.code)
+            codeRef.current = draft.code
+            setLanguageId(draft.languageId)
+            languageRef.current = draft.languageId
+            setSavedDraft({ code: draft.code, languageId: draft.languageId })
             setSolutionSaved(true)
           }
         } catch (error) {
-          console.error('Error loading saved solution:', error)
+          console.error('Error loading draft:', error)
         }
       }
     }
+
+    loadDraft()
   }, [isAssignmentContext, assignmentId, problemId])
 
   // Load initial code from problem codeStubs when problem changes
@@ -94,18 +99,28 @@ export default function CodePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problem?.id, isAssignmentContext])
 
-  // Update code stub when language changes (only if code was stub or empty)
+  // Update code stub when language changes
   useEffect(() => {
-    if (problem && problem.codeStubs && !isAssignmentContext) {
+    if (problem && problem.codeStubs) {
       const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
       const stubCode = problem.codeStubs[languageKey]
 
-      // Check if current code matches a code stub or is empty
-      const isStubOrEmpty = code.trim() === "" || Object.values(problem.codeStubs).some(stub => code.trim() === stub.trim())
-
-      if (stubCode && isStubOrEmpty) {
-        setCode(stubCode)
-        codeRef.current = stubCode
+      if (isAssignmentContext) {
+        // For assignments: if switching to saved language, show saved draft; otherwise show template
+        if (savedDraft && languageId === savedDraft.languageId) {
+          setCode(savedDraft.code)
+          codeRef.current = savedDraft.code
+        } else if (stubCode) {
+          setCode(stubCode)
+          codeRef.current = stubCode
+        }
+      } else {
+        // For regular problems: only update if code is stub or empty
+        const isStubOrEmpty = code.trim() === "" || Object.values(problem.codeStubs).some(stub => code.trim() === stub.trim())
+        if (stubCode && isStubOrEmpty) {
+          setCode(stubCode)
+          codeRef.current = stubCode
+        }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -203,20 +218,18 @@ export default function CodePage() {
     }
   }, [user, problemId, code, languageId, submitCode, setActiveTab])
 
-  const handleSaveAssignmentSolution = useCallback(() => {
-    if (!isAssignmentContext || !problemId) return
+  const handleSaveAssignmentSolution = useCallback(async () => {
+    if (!isAssignmentContext || !problemId || !assignmentId) return
 
     try {
-      // Get existing solutions
-      const savedSolutions = localStorage.getItem(`assignment_${assignmentId}_solutions`)
-      const solutions = savedSolutions ? JSON.parse(savedSolutions) : {}
+      await assignmentService.saveDraft(assignmentId, {
+        problemId,
+        code: codeRef.current,
+        languageId: languageRef.current,
+      })
 
-      // Update solution for current problem
-      solutions[problemId] = codeRef.current
-
-      // Save back to localStorage
-      localStorage.setItem(`assignment_${assignmentId}_solutions`, JSON.stringify(solutions))
-
+      // Update saved draft state
+      setSavedDraft({ code: codeRef.current, languageId: languageRef.current })
       setSolutionSaved(true)
       toast.success("Solution saved successfully")
     } catch (error) {
@@ -416,17 +429,16 @@ export default function CodePage() {
                           size="sm"
                           onClick={handleRun}
                           disabled={isRunning}
-                          className="h-8 px-4 text-xs bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 font-semibold"
+                          className="h-8 px-2 md:px-4 text-xs bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 font-semibold"
                         >
                           {isRunning ? (
                             <>
-                              <Square className="h-3.5 w-3.5 mr-1.5" />
-                              Running...
+                              <Square className="h-3.5 w-3.5 md:mr-1.5" />
+                              <span className="hidden md:inline">Running...</span>
                             </>
                           ) : (
                             <>
-                              <Play className="h-3.5 w-3.5 mr-1.5" />
-                              Run
+                              <Play className="h-3.5 w-3.5" />
                             </>
                           )}
                         </Button>
@@ -437,29 +449,28 @@ export default function CodePage() {
                               size="sm"
                               onClick={handleSaveAssignmentSolution}
                               variant={solutionSaved ? "secondary" : "default"}
-                              className="h-8 px-4 text-xs font-semibold"
+                              className="h-8 px-2 md:px-4 text-xs font-semibold"
                             >
-                              <Save className="h-3.5 w-3.5 mr-1.5" />
-                              {solutionSaved ? "Saved" : "Save Solution"}
+                              <Save className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               size="sm"
                               onClick={handleBackToAssignment}
                               variant="outline"
-                              className="h-8 px-4 text-xs font-semibold"
+                              className="h-8 px-2 md:px-4 text-xs font-semibold"
                             >
-                              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-                              Back
+                              <ArrowLeft className="h-3.5 w-3.5 md:mr-1.5" />
+                              <span className="hidden md:inline">Back</span>
                             </Button>
                           </>
                         ) : (
                           <Button
                             size="sm"
                             onClick={handleSubmit}
-                            className="h-8 px-4 text-xs bg-primary text-white shadow-lg shadow-violet-600/20 font-semibold"
+                            className="h-8 px-2 md:px-4 text-xs bg-primary text-white shadow-lg shadow-violet-600/20 font-semibold"
                           >
-                            <Zap className="h-3.5 w-3.5 mr-1.5" />
-                            Submit
+                            <Zap className="h-3.5 w-3.5 md:mr-1.5" />
+                            <span className="hidden md:inline">Submit</span>
                           </Button>
                         )}
                       </div>

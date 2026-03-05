@@ -54,9 +54,10 @@ export default function AssignmentDetailPage() {
 
     try {
       setLoading(true)
-      const [assignmentData, submissionData] = await Promise.all([
+      const [assignmentData, submissionData, drafts] = await Promise.all([
         assignmentService.getAssignmentById(assignmentId),
-        assignmentService.getMySubmission(assignmentId)
+        assignmentService.getMySubmission(assignmentId),
+        assignmentService.getAssignmentDrafts(assignmentId).catch(() => [])
       ])
 
       setAssignment(assignmentData)
@@ -65,14 +66,18 @@ export default function AssignmentDetailPage() {
       if (submissionData) {
         setSolutions(submissionData.solutions)
       } else {
-        // Initialize empty solutions for each problem
-        const emptySolutions: Record<string, string> = {}
+        // Initialize solutions from drafts if available, otherwise empty
+        const draftSolutions: Record<string, string> = {}
+
         if (assignmentData.problems && Array.isArray(assignmentData.problems)) {
           assignmentData.problems.forEach(ap => {
-            emptySolutions[ap.problemId] = ''
+            // Check if there's a draft for this problem
+            const draft = drafts.find(d => d.problemId === ap.problemId)
+            draftSolutions[ap.problemId] = draft?.code || ''
           })
         }
-        setSolutions(emptySolutions)
+
+        setSolutions(draftSolutions)
       }
     } catch (error) {
       console.error("Error fetching assignment data:", error)
@@ -263,12 +268,6 @@ export default function AssignmentDetailPage() {
                         >
                           {problem.difficulty}
                         </Badge>
-                        {hasSolution && (
-                          <Badge variant="outline">
-                            <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                            Solution Added
-                          </Badge>
-                        )}
                       </div>
                     </div>
                   </CardHeader>
@@ -280,26 +279,18 @@ export default function AssignmentDetailPage() {
                           <Code className="h-4 w-4" />
                           <span>View problem details</span>
                         </div>
+                        {hasSolution && (
+                          <Badge variant="secondary" className="gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            Solution Saved
+                          </Badge>
+                        )}
                       </div>
                       <Button variant="outline">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         Solve Problem
                       </Button>
                     </div>
-
-                    {hasSolution && (
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="text-sm font-medium text-muted-foreground mb-2">
-                          Current Solution:
-                        </div>
-                        <div className="bg-muted p-3 rounded-lg">
-                          <code className="text-sm">
-                            {solutions[problem.id].slice(0, 100)}
-                            {solutions[problem.id].length > 100 && '...'}
-                          </code>
-                        </div>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
               )

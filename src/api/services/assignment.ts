@@ -77,6 +77,23 @@ export interface SubmitAssignmentDto {
   solutions: Record<string, string>
 }
 
+export interface AssignmentDraft {
+  id: string
+  assignmentId: string
+  studentId: string
+  problemId: string
+  code: string
+  languageId: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface SaveDraftDto {
+  problemId: string
+  code: string
+  languageId: number
+}
+
 export class AssignmentService {
   private baseURL = `${API_CONFIG.CLASSROOM_SERVICE_URL}/classroom`
 
@@ -148,6 +165,52 @@ export class AssignmentService {
       }
       throw error
     }
+  }
+
+  async saveDraft(
+    assignmentId: string,
+    data: SaveDraftDto
+  ): Promise<AssignmentDraft> {
+    const response = await apiClient.post(
+      `${this.baseURL}/assignment/${assignmentId}/draft`,
+      data
+    )
+    const responseData = response.data as { draft: AssignmentDraft }
+    return responseData.draft
+  }
+
+  async getDraft(
+    assignmentId: string,
+    problemId: string
+  ): Promise<AssignmentDraft | null> {
+    try {
+      const response = await apiClient.get(
+        `${this.baseURL}/assignment/${assignmentId}/problem/${problemId}/draft`
+      )
+      const data = response.data as { draft?: AssignmentDraft } | null
+      return data?.draft || null
+    } catch (error: any) {
+      if (error.message?.includes("404")) {
+        return null
+      }
+      throw error
+    }
+  }
+
+  async getAssignmentDrafts(
+    assignmentId: string
+  ): Promise<AssignmentDraft[]> {
+    const response = await apiClient.get(
+      `${this.baseURL}/assignment/${assignmentId}/drafts`
+    )
+    const data = response.data as { drafts: AssignmentDraft[] }
+    return data.drafts || []
+  }
+
+  async deleteAssignmentDrafts(assignmentId: string): Promise<void> {
+    await apiClient.delete(
+      `${this.baseURL}/assignment/${assignmentId}/drafts`
+    )
   }
 }
 
