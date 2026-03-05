@@ -17,6 +17,7 @@ const CoursesPage = lazy(() => import('@/app/courses/page'))
 
 // Course assignment pages
 const CourseAssignmentsPage = lazy(() => import('@/app/courses/[courseId]/page'))
+const CreateAssignmentPage = lazy(() => import('@/app/courses/[courseId]/assignments/create/page'))
 const AssignmentDetailPage = lazy(() => import('@/app/courses/[courseId]/assignments/[assignmentId]/page'))
 
 // Auth pages
@@ -95,6 +96,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/courses/:courseId/assignments",
     element: <ProtectedRoute><CourseAssignmentsPage /></ProtectedRoute>
+  },
+  {
+    path: "/courses/:courseId/assignments/create",
+    element: <ProtectedRoute><CreateAssignmentPage /></ProtectedRoute>
   },
   {
     path: "/courses/:courseId/assignments/:assignmentId",
