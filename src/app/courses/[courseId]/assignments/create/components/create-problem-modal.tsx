@@ -61,6 +61,7 @@ export default function CreateProblemModal({
         hints: [],
         companies: [],
         testcases: [],
+        hiddenTestcases: [],
     })
 
     const [newExample, setNewExample] = useState<Example>({
@@ -70,6 +71,11 @@ export default function CreateProblemModal({
     })
 
     const [newTestCase, setNewTestCase] = useState<TestCase>({
+        input: "",
+        output: "",
+    })
+
+    const [newHiddenTestCase, setNewHiddenTestCase] = useState<TestCase>({
         input: "",
         output: "",
     })
@@ -90,9 +96,11 @@ export default function CreateProblemModal({
             hints: [],
             companies: [],
             testcases: [],
+            hiddenTestcases: [],
         })
         setNewExample({ input: "", output: "", explanation: "" })
         setNewTestCase({ input: "", output: "" })
+        setNewHiddenTestCase({ input: "", output: "" })
         setNewTag("")
         setNewConstraint("")
         setNewHint("")
@@ -142,6 +150,29 @@ export default function CreateProblemModal({
         setFormData({
             ...formData,
             testcases: formData.testcases.filter((_, i) => i !== index),
+        })
+    }
+
+    const handleAddHiddenTestCase = () => {
+        if (!newHiddenTestCase.input || !newHiddenTestCase.output) {
+            toast({
+                title: "Error",
+                description: "Please fill in input and output for the hidden test case",
+                variant: "destructive",
+            })
+            return
+        }
+        setFormData({
+            ...formData,
+            hiddenTestcases: [...(formData.hiddenTestcases || []), { ...newHiddenTestCase }],
+        })
+        setNewHiddenTestCase({ input: "", output: "" })
+    }
+
+    const handleRemoveHiddenTestCase = (index: number) => {
+        setFormData({
+            ...formData,
+            hiddenTestcases: (formData.hiddenTestcases || []).filter((_, i) => i !== index),
         })
     }
 
@@ -246,10 +277,18 @@ export default function CreateProblemModal({
         if (formData.testcases.length === 0) {
             toast({
                 title: "Error",
-                description: "Please add at least one test case",
+                description: "Please add at least one visible test case",
                 variant: "destructive",
             })
             return
+        }
+
+        if ((formData.hiddenTestcases?.length || 0) === 0) {
+            toast({
+                title: "Warning",
+                description: "No hidden test cases added. Students will be able to see all test cases.",
+            })
+            // Don't return - allow creation but warn the user
         }
 
         try {
@@ -276,11 +315,11 @@ export default function CreateProblemModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Create New Problem</DialogTitle>
                     <DialogDescription>
-                        Create a new coding problem to add to your assignment
+                        Create a new coding problem that will be added to the global problem database and linked to this assignment.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -322,6 +361,9 @@ export default function CreateProblemModal({
 
                             <div className="space-y-2">
                                 <Label htmlFor="statement">Problem Statement *</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Include input/output format description (e.g., &quot;Input Format: First line contains n, second line contains n space-separated integers&quot;)
+                                </p>
                                 <Textarea
                                     id="statement"
                                     placeholder="Describe the problem..."
@@ -375,16 +417,20 @@ export default function CreateProblemModal({
                         {/* Examples */}
                         <div className="space-y-2">
                             <Label>Examples * (At least 1 required)</Label>
+                            <p className="text-xs text-muted-foreground">
+                                Use plain text format with line breaks (\n) for multi-line input/output. Example: &quot;4 9\n2 7 11 15&quot;
+                            </p>
                             <div className="space-y-2 p-3 border rounded-lg">
-                                <Input
-                                    placeholder="Input"
+                                <Textarea
+                                    placeholder="Input (use \n for line breaks, e.g., '4 9\n2 7 11 15')"
                                     value={newExample.input}
                                     onChange={(e) =>
                                         setNewExample({ ...newExample, input: e.target.value })
                                     }
+                                    rows={3}
                                 />
                                 <Input
-                                    placeholder="Output"
+                                    placeholder="Output (e.g., '0 1')"
                                     value={newExample.output}
                                     onChange={(e) =>
                                         setNewExample({ ...newExample, output: e.target.value })
@@ -416,10 +462,10 @@ export default function CreateProblemModal({
                                                     <X className="h-3 w-3" />
                                                 </Button>
                                             </div>
-                                            <p className="text-sm"><strong>Input:</strong> {example.input}</p>
-                                            <p className="text-sm"><strong>Output:</strong> {example.output}</p>
+                                            <pre className="text-xs bg-background p-2 rounded border mb-1"><strong>Input:</strong>{"\n"}{example.input}</pre>
+                                            <pre className="text-xs bg-background p-2 rounded border mb-1"><strong>Output:</strong> {example.output}</pre>
                                             {example.explanation && (
-                                                <p className="text-sm"><strong>Explanation:</strong> {example.explanation}</p>
+                                                <p className="text-sm mt-2"><strong>Explanation:</strong> {example.explanation}</p>
                                             )}
                                         </div>
                                     ))}
@@ -430,13 +476,17 @@ export default function CreateProblemModal({
                         {/* Test Cases */}
                         <div className="space-y-2">
                             <Label>Test Cases * (At least 1 required)</Label>
+                            <p className="text-xs text-muted-foreground">
+                                Visible test cases shown to students when they click &quot;Run Code&quot;. Use the same format as examples.
+                            </p>
                             <div className="space-y-2 p-3 border rounded-lg">
-                                <Input
-                                    placeholder="Input"
+                                <Textarea
+                                    placeholder="Input (use \n for line breaks)"
                                     value={newTestCase.input}
                                     onChange={(e) =>
                                         setNewTestCase({ ...newTestCase, input: e.target.value })
                                     }
+                                    rows={3}
                                 />
                                 <Input
                                     placeholder="Output"
@@ -450,8 +500,91 @@ export default function CreateProblemModal({
                                 </Button>
                             </div>
                             {formData.testcases.length > 0 && (
-                                <div className="text-sm text-muted-foreground">
-                                    {formData.testcases.length} test case(s) added
+                                <div className="space-y-2">
+                                    <div className="text-sm text-muted-foreground">
+                                        {formData.testcases.length} test case(s) added
+                                    </div>
+                                    <details className="mt-2">
+                                        <summary className="cursor-pointer text-sm font-medium hover:underline">
+                                            Preview Test Cases
+                                        </summary>
+                                        <div className="space-y-2 mt-2">
+                                            {formData.testcases.map((tc, index) => (
+                                                <div key={index} className="p-3 border rounded-lg bg-muted/30">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="font-medium text-sm">Test Case {index + 1}</span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleRemoveTestCase(index)}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <pre className="text-xs bg-background p-2 rounded border"><strong>Input:</strong>{"\n"}{tc.input}</pre>
+                                                    <pre className="text-xs bg-background p-2 rounded border mt-1"><strong>Output:</strong> {tc.output}</pre>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Hidden Test Cases */}
+                        <div className="space-y-2">
+                            <Label>Hidden Test Cases (Used for final submission evaluation)</Label>
+                            <p className="text-xs text-muted-foreground">These test cases won&apos;t be visible to students</p>
+                            <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
+                                <Textarea
+                                    placeholder="Input (use \n for line breaks)"
+                                    value={newHiddenTestCase.input}
+                                    onChange={(e) =>
+                                        setNewHiddenTestCase({ ...newHiddenTestCase, input: e.target.value })
+                                    }
+                                    rows={3}
+                                />
+                                <Input
+                                    placeholder="Output"
+                                    value={newHiddenTestCase.output}
+                                    onChange={(e) =>
+                                        setNewHiddenTestCase({ ...newHiddenTestCase, output: e.target.value })
+                                    }
+                                />
+                                <Button type="button" onClick={handleAddHiddenTestCase} size="sm" className="w-full">
+                                    <Plus className="h-4 w-4 mr-2" /> Add Hidden Test Case
+                                </Button>
+                            </div>
+                            {(formData.hiddenTestcases?.length || 0) > 0 && (
+                                <div className="space-y-2">
+                                    <div className="text-sm text-muted-foreground">
+                                        {formData.hiddenTestcases?.length || 0} hidden test case(s) added
+                                    </div>
+                                    <details className="mt-2">
+                                        <summary className="cursor-pointer text-sm font-medium hover:underline">
+                                            Preview Hidden Test Cases
+                                        </summary>
+                                        <div className="space-y-2 mt-2">
+                                            {(formData.hiddenTestcases || []).map((tc, index) => (
+                                                <div key={index} className="p-3 border rounded-lg bg-muted/30">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <span className="font-medium text-sm">Hidden Test {index + 1}</span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleRemoveHiddenTestCase(index)}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <pre className="text-xs bg-background p-2 rounded border"><strong>Input:</strong>{"\n"}{tc.input}</pre>
+                                                    <pre className="text-xs bg-background p-2 rounded border mt-1"><strong>Output:</strong> {tc.output}</pre>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </details>
                                 </div>
                             )}
                         </div>

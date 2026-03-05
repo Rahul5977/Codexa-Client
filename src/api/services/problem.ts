@@ -46,6 +46,10 @@ export interface CreateProblemInput {
   hints: string[]
   companies: string[]
   testcases: TestCase[]
+  hiddenTestcases?: TestCase[]
+  functionName?: string
+  parameters?: { name: string; type: string }[]
+  returnType?: string
 }
 
 export interface UpdateProblemInput extends Partial<CreateProblemInput> {}
