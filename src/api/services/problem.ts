@@ -24,7 +24,7 @@ export interface Problem {
   tags: string[]
   hints: string[]
   companies: string[]
-  testcases: TestCase[]
+  testcases?: TestCase[] // Optional - not returned by API for security
   functionName?: string
   parameters?: { name: string; type: string }[]
   returnType?: string

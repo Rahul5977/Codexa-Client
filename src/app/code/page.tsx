@@ -40,14 +40,14 @@ export default function CodePage() {
   const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading } = useCodeExecution()
   const { submit: submitCode, submissionId, loading: submitLoading } = useCodeSubmission()
   const { submission, poll: pollSubmission } = useSubmission(submissionId)
-  
+
   const [activeTab, setActiveTab] = useState("code")
   const [leftPanelSize, setLeftPanelSize] = useState(45)
   const [rightPanelSize, setRightPanelSize] = useState(55)
   const [problemTab, setProblemTab] = useState<"description" | "submissions" | "hints">("description")
   const [solutionSaved, setSolutionSaved] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
-  
+
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
   const [languageId, setLanguageId] = useState(71) // Default to Python
@@ -84,40 +84,42 @@ export default function CodePage() {
     if (problem && problem.codeStubs && !isAssignmentContext) {
       const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
       const stubCode = problem.codeStubs[languageKey]
-      
+
       // Only set initial code if current code is empty
       if (stubCode && code.trim() === "") {
         setCode(stubCode)
         codeRef.current = stubCode
       }
     }
-  }, [problem, languageId, isAssignmentContext])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [problem?.id, isAssignmentContext])
 
   // Update code stub when language changes (only if code was stub or empty)
   useEffect(() => {
     if (problem && problem.codeStubs && !isAssignmentContext) {
       const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
       const stubCode = problem.codeStubs[languageKey]
-      
+
       // Check if current code matches a code stub or is empty
       const isStubOrEmpty = code.trim() === "" || Object.values(problem.codeStubs).some(stub => code.trim() === stub.trim())
-      
+
       if (stubCode && isStubOrEmpty) {
         setCode(stubCode)
         codeRef.current = stubCode
       }
     }
-  }, [languageId])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [languageId, problem?.id, isAssignmentContext])
 
   // Poll for submission results when a submission is made
   useEffect(() => {
     if (submissionId) {
       let cleanup: (() => void) | undefined
-      
+
       pollSubmission().then((cleanupFn) => {
         cleanup = cleanupFn
       })
-      
+
       return () => {
         if (cleanup) cleanup()
       }
@@ -146,15 +148,15 @@ export default function CodePage() {
       toast.error("Please write some code first")
       return
     }
-    
+
     if (!problem?.examples || problem.examples.length === 0) {
       toast.error("No test cases available for this problem")
       return
     }
-    
+
     setActiveTab("testcases")
     toast.info(`Running your code against ${problem.examples.length} test case(s)...`)
-    
+
     try {
       const testCases = problem.examples.map((example) => ({
         input: example.input,
@@ -173,20 +175,20 @@ export default function CodePage() {
       toast.error("Please login to submit code")
       return
     }
-    
+
     if (!problemId) {
       toast.error("No problem selected")
       return
     }
-    
+
     if (!code || code.trim() === '') {
       toast.error("Please write some code first")
       return
     }
-    
+
     setActiveTab("testcases")
     toast.info("Submitting your solution...")
-    
+
     try {
       await submitCode({
         userId: user.id,
@@ -208,13 +210,13 @@ export default function CodePage() {
       // Get existing solutions
       const savedSolutions = localStorage.getItem(`assignment_${assignmentId}_solutions`)
       const solutions = savedSolutions ? JSON.parse(savedSolutions) : {}
-      
+
       // Update solution for current problem
       solutions[problemId] = codeRef.current
-      
+
       // Save back to localStorage
       localStorage.setItem(`assignment_${assignmentId}_solutions`, JSON.stringify(solutions))
-      
+
       setSolutionSaved(true)
       toast.success("Solution saved successfully")
     } catch (error) {
@@ -239,7 +241,7 @@ export default function CodePage() {
     setLanguageId(newLanguageId)
     codeRef.current = newCode
     languageRef.current = newLanguageId
-    
+
     // Mark solution as not saved when code changes in assignment context
     if (isAssignmentContext && solutionSaved) {
       setSolutionSaved(false)
@@ -283,8 +285,8 @@ export default function CodePage() {
   return (
     <BaseLayout>
       <div className="h-[90vh] flex flex-col overflow-y-auto bg-background m-0">
-        <PanelGroup 
-          direction="horizontal" 
+        <PanelGroup
+          direction="horizontal"
           className="h-full gap-3 p-3"
           onLayout={(sizes) => {
             if (sizes[0] !== undefined) setLeftPanelSize(sizes[0])
@@ -300,8 +302,8 @@ export default function CodePage() {
                     onClick={() => setProblemTab("submissions")}
                     className={cn(
                       "[writing-mode:vertical-rl] flex gap-2 items-center justify-center rotate-180 rounded-lg transition-all text-sm font-medium",
-                      problemTab === "submissions" 
-                        ? "bg-muted p-2 border shadow-lg" 
+                      problemTab === "submissions"
+                        ? "bg-muted p-2 border shadow-lg"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
@@ -350,8 +352,8 @@ export default function CodePage() {
                     onClick={() => setActiveTab("testcases")}
                     className={cn(
                       "[writing-mode:vertical-rl] flex gap-2 items-center justify-center rotate-180 rounded-lg transition-all text-sm font-medium",
-                      activeTab === "testcases" 
-                        ? "bg-muted p-2 border shadow-lg" 
+                      activeTab === "testcases"
+                        ? "bg-muted p-2 border shadow-lg"
                         : "text-muted-foreground hover:text-foreground"
                     )}
                   >
@@ -428,7 +430,7 @@ export default function CodePage() {
                             </>
                           )}
                         </Button>
-                        
+
                         {isAssignmentContext ? (
                           <>
                             <Button

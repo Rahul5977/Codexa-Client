@@ -34,9 +34,15 @@ export interface AssignmentProblem {
   problem: {
     id: string
     title: string
-    description: string
+    description?: string
+    statement?: string
     difficulty: "EASY" | "MEDIUM" | "HARD"
-    testCases: any[]
+    examples?: any[]
+    constraints?: string[]
+    tags?: string[]
+    hints?: string[]
+    companies?: string[]
+    // testCases excluded for security
   }
 }
 

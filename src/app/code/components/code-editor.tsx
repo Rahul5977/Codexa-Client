@@ -99,7 +99,7 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
     // If initialCode is provided (from assignment context), use it
     if (initialCode) {
       setCode(initialCode)
-    } 
+    }
     // Otherwise, use problem's code stub if available
     else if (problem?.codeStubs && problem.codeStubs[selectedLanguage]) {
       setCode(problem.codeStubs[selectedLanguage])
@@ -108,13 +108,15 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
     else {
       setCode(DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here")
     }
-  }, [problem?.id, initialCode])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [problem?.id])
 
-  // Sync selected language with parent
+  // Sync selected language with parent (only on mount or when initialLanguage prop changes)
   useEffect(() => {
     if (initialLanguage && initialLanguage !== selectedLanguage) {
       setSelectedLanguage(initialLanguage)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialLanguage])
 
   // Notify parent of code/language changes
@@ -123,13 +125,14 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
     if (onCodeChange && language) {
       onCodeChange(code, language.judge0Id)
     }
-  }, [code, selectedLanguage, onCodeChange])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code, selectedLanguage])
 
   // Update Monaco theme based on system theme
   useEffect(() => {
     const updateEditorTheme = () => {
       const root = window.document.documentElement
-      
+
       // Check if theme is system, then check actual system preference
       if (theme === 'system') {
         const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -146,9 +149,9 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
     // Listen for system theme changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleChange = () => updateEditorTheme()
-    
+
     mediaQuery.addEventListener('change', handleChange)
-    
+
     // Also observe DOM changes for theme class updates
     const observer = new MutationObserver(updateEditorTheme)
     observer.observe(document.documentElement, {
@@ -214,7 +217,7 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
           {/* Enhanced Toolbar */}
           <div className="flex items-center justify-between p-2 border-b border-border/60 bg-linear-to-r from-muted/40 via-muted/20 to-transparent">
             <div className="flex items-center gap-3">
-              
+
               {/* Language Selector */}
               <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
                 <SelectTrigger className="text-sm font-medium border-border/60 bg-background/80 hover:bg-background hover:border-primary/40 transition-all shadow-sm">
@@ -236,10 +239,10 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
 
             {/* Editor Actions */}
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopy} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopy}
                 className="px-3 border-border/60 hover:bg-green-500/10 hover:border-green-500/40 hover:text-green-600 dark:hover:text-green-400 transition-all shadow-sm"
               >
                 {copied ? (
@@ -253,10 +256,10 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
                   </>
                 )}
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleReset} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReset}
                 className="h-9 px-3 border-border/60 hover:bg-orange-500/10 hover:border-orange-500/40 hover:text-orange-600 dark:hover:text-orange-400 transition-all shadow-sm"
               >
                 <RotateCcw className="h-4 w-4" />

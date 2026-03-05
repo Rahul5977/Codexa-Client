@@ -278,7 +278,7 @@ export default function AssignmentDetailPage() {
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Code className="h-4 w-4" />
-                          <span>{problem.testCases?.length || 0} test case{(problem.testCases?.length || 0) !== 1 ? 's' : ''}</span>
+                          <span>View problem details</span>
                         </div>
                       </div>
                       <Button variant="outline">
