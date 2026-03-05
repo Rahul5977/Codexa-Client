@@ -84,42 +84,33 @@ export default function CodePage() {
     loadDraft()
   }, [isAssignmentContext, assignmentId, problemId])
 
-  // Load initial code from problem codeStubs when problem changes
+  // No longer loading initial code from problem codeStubs - users write from scratch
   useEffect(() => {
-    if (problem && problem.codeStubs && !isAssignmentContext) {
-      const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
-      const stubCode = problem.codeStubs[languageKey]
-
-      // Only set initial code if current code is empty
-      if (stubCode && code.trim() === "") {
-        setCode(stubCode)
-        codeRef.current = stubCode
-      }
+    // Initialize with empty code when problem changes
+    if (problem && !isAssignmentContext && code.trim() === "") {
+      setCode("")
+      codeRef.current = ""
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problem?.id, isAssignmentContext])
 
-  // Update code stub when language changes
+  // Update code when language changes
   useEffect(() => {
-    if (problem && problem.codeStubs) {
-      const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId]
-      const stubCode = problem.codeStubs[languageKey]
-
+    if (problem) {
       if (isAssignmentContext) {
-        // For assignments: if switching to saved language, show saved draft; otherwise show template
+        // For assignments: if switching to saved language, show saved draft; otherwise clear
         if (savedDraft && languageId === savedDraft.languageId) {
           setCode(savedDraft.code)
           codeRef.current = savedDraft.code
-        } else if (stubCode) {
-          setCode(stubCode)
-          codeRef.current = stubCode
+        } else {
+          setCode("")
+          codeRef.current = ""
         }
       } else {
-        // For regular problems: only update if code is stub or empty
-        const isStubOrEmpty = code.trim() === "" || Object.values(problem.codeStubs).some(stub => code.trim() === stub.trim())
-        if (stubCode && isStubOrEmpty) {
-          setCode(stubCode)
-          codeRef.current = stubCode
+        // For regular problems: clear code when changing language (unless user has written code)
+        if (code.trim() === "") {
+          setCode("")
+          codeRef.current = ""
         }
       }
     }

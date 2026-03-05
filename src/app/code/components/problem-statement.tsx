@@ -49,7 +49,7 @@ const formatTimeAgo = (date: string | Date) => {
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
-  
+
   if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
   if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
   if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
@@ -60,7 +60,7 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
   const [internalActiveTab, setInternalActiveTab] = useState("description")
   const { user } = useAuth()
   const { submissions, loading: submissionsLoading, fetch: fetchSubmissions } = useSubmissionHistory(user?.id, problem?.id)
-  
+
   // Use external tab if provided, otherwise use internal
   const activeTab = externalActiveTab || internalActiveTab
   const handleTabChange = (value: string) => {
@@ -225,9 +225,9 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
             <div className="p-3 space-y-6">
               {/* Description */}
               <div>
-                <p className="text-muted-foreground leading-relaxed text-base">
+                <div className="text-muted-foreground leading-relaxed text-base whitespace-pre-wrap">
                   {problem.statement || "No description available for this problem."}
-                </p>
+                </div>
               </div>
 
               {/* Examples */}
@@ -239,18 +239,18 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                       <div key={index} className="space-y-3">
                         <h4 className="font-semibold text-foreground">Example {index + 1}:</h4>
                         <div className="space-y-2 text-sm font-mono">
-                          <div className="flex gap-2">
-                            <span className="text-muted-foreground font-semibold min-w-22.5">Input:</span>
-                            <span className="text-foreground">{example.input}</span>
+                          <div>
+                            <div className="text-muted-foreground font-semibold mb-1">Input:</div>
+                            <pre className="text-foreground bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words">{example.input}</pre>
                           </div>
-                          <div className="flex gap-2">
-                            <span className="text-muted-foreground font-semibold min-w-22.5">Output:</span>
-                            <span className="text-primary font-semibold">{example.output}</span>
+                          <div>
+                            <div className="text-muted-foreground font-semibold mb-1">Output:</div>
+                            <pre className="text-primary font-semibold bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words">{example.output}</pre>
                           </div>
                           {example.explanation && (
-                            <div className="flex gap-2">
-                              <span className="text-muted-foreground font-semibold min-w-22.5">Explanation:</span>
-                              <span className="text-muted-foreground">{example.explanation}</span>
+                            <div>
+                              <div className="text-muted-foreground font-semibold mb-1">Explanation:</div>
+                              <div className="text-muted-foreground bg-muted/20 p-2 rounded border border-border/50">{example.explanation}</div>
                             </div>
                           )}
                         </div>
@@ -322,10 +322,10 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
                       const runtime = submission.time ? `${parseFloat(submission.time) * 1000}ms` : 'N/A'
                       const memory = submission.memory ? `${(submission.memory / 1024).toFixed(1)}MB` : 'N/A'
                       const timestamp = formatTimeAgo(submission.createdAt)
-                    
+
                       return (
-                        <Card 
-                          key={submission.id} 
+                        <Card
+                          key={submission.id}
                           className="p-4 border-border/50 hover:shadow-md transition-all cursor-pointer hover:border-primary/30 bg-linear-to-br from-muted/10 to-background"
                           onClick={() => onSubmissionClick?.(submission.id)}
                         >

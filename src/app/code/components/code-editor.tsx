@@ -36,63 +36,27 @@ const LANGUAGES = [
 ]
 
 const DEFAULT_CODE_TEMPLATES = {
-  javascript: `function solution(nums, target) {
-    // Your code here
-    
-}`,
-  python: `def solution(nums, target):
-    # Your code here
-    pass`,
-  java: `class Main {
-    public static void main(String[] args) {
-        // Your code here
-        
-    }
-}`,
-  cpp: `#include <iostream>
-#include <vector>
-using namespace std;
-
-int main() {
-    // Your code here
-    return 0;
-}`,
-  typescript: `function solution(nums: number[], target: number): number[] {
-    // Your code here
-    return [];
-}`,
-  c: `#include <stdio.h>
-
-int main() {
-    // Your code here
-    return 0;
-}`,
-  go: `package main
-
-import "fmt"
-
-func main() {
-    // Your code here
-}`,
-  rust: `fn main() {
-    // Your code here
-}`
+  javascript: "",
+  python: "",
+  java: "",
+  cpp: "",
+  typescript: "",
+  c: "",
+  go: "",
+  rust: ""
 }
 
 export function CodeEditor({ problem, loading, onCodeChange, initialCode, initialLanguage }: CodeEditorProps) {
   const { theme } = useTheme()
   const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || "python")
-  const [code, setCode] = useState(initialCode || DEFAULT_CODE_TEMPLATES.python)
+  const [code, setCode] = useState(initialCode || "")
   const [copied, setCopied] = useState(false)
   const [editorTheme, setEditorTheme] = useState<string>("vs-dark")
 
-  // Helper to get template code - prefer problem codeStubs over defaults
+  // Helper to get template code - always return empty string for clean slate
   const getTemplateCode = useCallback((language: string): string => {
-    if (problem?.codeStubs && problem.codeStubs[language]) {
-      return problem.codeStubs[language]
-    }
-    return DEFAULT_CODE_TEMPLATES[language as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here"
-  }, [problem])
+    return DEFAULT_CODE_TEMPLATES[language as keyof typeof DEFAULT_CODE_TEMPLATES] || ""
+  }, [])
 
   // Initialize code when component mounts or problem changes
   useEffect(() => {
@@ -100,13 +64,9 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
     if (initialCode) {
       setCode(initialCode)
     }
-    // Otherwise, use problem's code stub if available
-    else if (problem?.codeStubs && problem.codeStubs[selectedLanguage]) {
-      setCode(problem.codeStubs[selectedLanguage])
-    }
-    // Fallback to default template
+    // Otherwise, start with empty code (no templates)
     else {
-      setCode(DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES] || "// Your code here")
+      setCode(DEFAULT_CODE_TEMPLATES[selectedLanguage as keyof typeof DEFAULT_CODE_TEMPLATES] || "")
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problem?.id])
