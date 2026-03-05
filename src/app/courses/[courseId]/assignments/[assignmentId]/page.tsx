@@ -1,12 +1,11 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import {
   Dialog,
@@ -29,14 +28,12 @@ import {
   ExternalLink
 } from "lucide-react"
 import { assignmentService, type Assignment, type AssignmentSubmission } from "@/api/services/assignment"
-import { useAuth } from "@/contexts/auth-context"
 import { format, isAfter } from "date-fns"
 import { BaseLayout } from "@/components/layouts/base-layout"
 
 export default function AssignmentDetailPage() {
   const { courseId, assignmentId } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
   const { toast } = useToast()
 
   const [loading, setLoading] = useState(true)
@@ -70,9 +67,11 @@ export default function AssignmentDetailPage() {
       } else {
         // Initialize empty solutions for each problem
         const emptySolutions: Record<string, string> = {}
-        assignmentData.problems.forEach(ap => {
-          emptySolutions[ap.problemId] = ''
-        })
+        if (assignmentData.problems && Array.isArray(assignmentData.problems)) {
+          assignmentData.problems.forEach(ap => {
+            emptySolutions[ap.problemId] = ''
+          })
+        }
         setSolutions(emptySolutions)
       }
     } catch (error) {
@@ -134,7 +133,7 @@ export default function AssignmentDetailPage() {
     }
   }
 
-  const isOverdue = assignment && isAfter(new Date(), new Date(assignment.deadline))
+  const isOverdue = assignment?.deadline ? isAfter(new Date(), new Date(assignment.deadline)) : false
   const canSubmit = assignment && !isOverdue && !submission
 
   if (loading) {
@@ -206,11 +205,11 @@ export default function AssignmentDetailPage() {
               <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  <span>Due: {format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a")}</span>
+                  <span>Due: {assignment.deadline ? format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a") : 'No deadline'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  <span>{assignment.problems.length} problem{assignment.problems.length !== 1 ? 's' : ''}</span>
+                  <span>{assignment.problems?.length || 0} problem{(assignment.problems?.length || 0) !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
@@ -232,7 +231,7 @@ export default function AssignmentDetailPage() {
           </div>
 
           <div className="grid gap-4">
-            {assignment.problems.map((assignmentProblem, index) => {
+            {assignment.problems?.map((assignmentProblem, index) => {
               const problem = assignmentProblem.problem
               const hasSolution = solutions[problem.id] && solutions[problem.id].trim() !== ''
 

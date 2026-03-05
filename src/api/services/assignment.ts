@@ -89,7 +89,8 @@ export class AssignmentService {
     const response = await apiClient.get(
       `${this.baseURL}/assignment/${assignmentId}`
     )
-    return response.data as Assignment
+    const data = response.data as { assignment: Assignment }
+    return data.assignment
   }
 
   async createAssignment(
@@ -100,7 +101,8 @@ export class AssignmentService {
       `${this.baseURL}/${classroomId}/assignment`,
       data
     )
-    return response.data as Assignment
+    const responseData = response.data as { assignment: Assignment }
+    return responseData.assignment
   }
 
   async submitAssignment(

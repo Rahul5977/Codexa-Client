@@ -232,6 +232,7 @@ export default function CourseDetailsPage() {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle>{assignment.title}</CardTitle>
+                          <CardTitle className="text-sm font-normal text-muted-foreground">{assignment.subtitle}</CardTitle>
                           <CardDescription className="mt-1">
                             {assignment.description}
                           </CardDescription>
