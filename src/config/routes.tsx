@@ -20,6 +20,11 @@ const CourseAssignmentsPage = lazy(() => import('@/app/courses/[courseId]/page')
 const CreateAssignmentPage = lazy(() => import('@/app/courses/[courseId]/assignments/create/page'))
 const AssignmentDetailPage = lazy(() => import('@/app/courses/[courseId]/assignments/[assignmentId]/page'))
 
+// Exam pages
+const ExamDetailPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/page'))
+const TakeExamPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/take/page'))
+const ExamSubmissionsPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/submissions/page'))
+
 // Auth pages
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
 const SignUp = lazy(() => import('@/app/auth/sign-up/page'))
@@ -108,6 +113,20 @@ export const routes: RouteConfig[] = [
   {
     path: "/courses/:courseId/assignments/:assignmentId",
     element: <ProtectedRoute><AssignmentDetailPage /></ProtectedRoute>
+  },
+
+  // Exam Routes
+  {
+    path: "/courses/:courseId/exams/:examId",
+    element: <ProtectedRoute><ExamDetailPage /></ProtectedRoute>
+  },
+  {
+    path: "/courses/:courseId/exams/:examId/take",
+    element: <ProtectedRoute><TakeExamPage /></ProtectedRoute>
+  },
+  {
+    path: "/courses/:courseId/exams/:examId/submissions",
+    element: <ProtectedRoute><ExamSubmissionsPage /></ProtectedRoute>
   },
 
   // Content Pages

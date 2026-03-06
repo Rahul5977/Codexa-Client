@@ -32,9 +32,10 @@ import {
   Lock
 } from "lucide-react"
 import { classroomService, type Classroom, type Student } from "@/api/services/classroom"
-import { assignmentService, type Assignment } from "@/api/services/assignment"
+import { assignmentService, type Assignment, type Exam, type CreateExamDto } from "@/api/services/assignment"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { isAfter } from "date-fns"
+import { CreateExamModal, type CreateExamFormData } from "@/app/courses/components/create-exam-modal"
 
 export default function CourseDetailsPage() {
   const params = useParams()
@@ -46,8 +47,11 @@ export default function CourseDetailsPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [exams, setExams] = useState<Exam[]>([])
   const [submissionMap, setSubmissionMap] = useState<Record<string, any>>({}) // assignmentId -> submission
+  const [examSubmissionMap, setExamSubmissionMap] = useState<Record<string, any>>({}) // examId -> submission
   const [activeTab, setActiveTab] = useState("assignments")
+  const [createExamModalOpen, setCreateExamModalOpen] = useState(false)
 
   useEffect(() => {
     if (courseId) {
@@ -61,35 +65,60 @@ export default function CourseDetailsPage() {
       const classroomData = await classroomService.getClassroomById(courseId)
       setClassroom(classroomData)
 
-      // Fetch assignments and students in parallel
-      const [assignmentsResponse, studentsResponse] = await Promise.all([
+      // Fetch assignments, exams, and students in parallel
+      const [assignmentsResponse, examsResponse, studentsResponse] = await Promise.all([
         assignmentService.getClassroomAssignments(courseId).catch(() => ({ assignments: [] })),
+        assignmentService.getClassroomExams(courseId).catch(() => []),
         classroomService.getClassroomStudents(courseId).catch(() => ({ students: [], totalStudents: 0 }))
       ])
 
       const assignmentsList = assignmentsResponse.assignments || []
+      const examsList = examsResponse || []
       setAssignments(assignmentsList)
+      setExams(examsList)
       setStudents(studentsResponse.students || [])
 
-      // If student, fetch submission status for each assignment
-      if (!classroomData.isTeacher && assignmentsList.length > 0) {
-        const submissionPromises = assignmentsList.map(async (assignment: Assignment) => {
-          try {
-            const submission = await assignmentService.getMySubmission(assignment.id)
-            return { assignmentId: assignment.id, submission }
-          } catch {
-            return { assignmentId: assignment.id, submission: null }
-          }
-        })
+      // If student, fetch submission status for each assignment and exam
+      if (!classroomData.isTeacher) {
+        if (assignmentsList.length > 0) {
+          const submissionPromises = assignmentsList.map(async (assignment: Assignment) => {
+            try {
+              const submission = await assignmentService.getMySubmission(assignment.id)
+              return { assignmentId: assignment.id, submission }
+            } catch {
+              return { assignmentId: assignment.id, submission: null }
+            }
+          })
 
-        const submissionResults = await Promise.all(submissionPromises)
-        const submissionData: Record<string, any> = {}
-        submissionResults.forEach(({ assignmentId, submission }) => {
-          if (submission) {
-            submissionData[assignmentId] = submission
-          }
-        })
-        setSubmissionMap(submissionData)
+          const submissionResults = await Promise.all(submissionPromises)
+          const submissionData: Record<string, any> = {}
+          submissionResults.forEach(({ assignmentId, submission }) => {
+            if (submission) {
+              submissionData[assignmentId] = submission
+            }
+          })
+          setSubmissionMap(submissionData)
+        }
+
+        if (examsList.length > 0) {
+          const examSubmissionPromises = examsList.map(async (exam: Exam) => {
+            try {
+              const submission = await assignmentService.getMyExamSubmission(exam.id)
+              return { examId: exam.id, submission }
+            } catch {
+              return { examId: exam.id, submission: null }
+            }
+          })
+
+          const examSubmissionResults = await Promise.all(examSubmissionPromises)
+          const examSubmissionData: Record<string, any> = {}
+          examSubmissionResults.forEach(({ examId, submission }) => {
+            if (submission) {
+              examSubmissionData[examId] = submission
+            }
+          })
+          setExamSubmissionMap(examSubmissionData)
+        }
       }
     } catch (error: any) {
       console.error("Error fetching classroom details:", error)
@@ -101,6 +130,39 @@ export default function CourseDetailsPage() {
       navigate("/courses")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCreateExam = async (data: CreateExamFormData) => {
+    try {
+      const examData: CreateExamDto = {
+        title: data.title,
+        subtitle: data.subtitle,
+        description: data.description,
+        startTime: new Date(data.startTime),
+        duration: data.duration,
+        problems: data.problemIds.map((problemId, index) => ({
+          problemId,
+          order: index + 1,
+        })),
+      }
+
+      await assignmentService.createExam(courseId, examData)
+      
+      toast({
+        title: "Success",
+        description: "Exam created successfully",
+      })
+      
+      setCreateExamModalOpen(false)
+      fetchClassroomDetails() // Refresh the list
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to create exam",
+        variant: "destructive",
+      })
+      throw error // Re-throw to prevent modal from closing on error
     }
   }
 
@@ -212,13 +274,17 @@ export default function CourseDetailsPage() {
 
         <Separator className="mb-6" />
 
-        {/* Tabs for Assignments and Students */}
+        {/* Tabs for Assignments, Exams, and Students */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="assignments">
                 <FileText className="mr-2 h-4 w-4" />
                 Assignments ({assignments.length})
+              </TabsTrigger>
+              <TabsTrigger value="exams">
+                <Clock className="mr-2 h-4 w-4" />
+                Exams ({exams.length})
               </TabsTrigger>
               <TabsTrigger value="students">
                 <Users className="mr-2 h-4 w-4" />
@@ -229,6 +295,12 @@ export default function CourseDetailsPage() {
               <Button onClick={() => navigate(`/courses/${courseId}/assignments/create`)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Assignment
+              </Button>
+            )}
+            {activeTab === "exams" && classroom.isTeacher && (
+              <Button onClick={() => setCreateExamModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Exam
               </Button>
             )}
           </div>
@@ -428,8 +500,151 @@ export default function CourseDetailsPage() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Exams Tab */}
+          <TabsContent value="exams" className="space-y-4">
+            {exams.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Clock className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No exams yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {classroom.isTeacher
+                      ? "Create your first exam to get started"
+                      : "Your teacher hasn't scheduled any exams yet"}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {exams.map((exam) => {
+                  const examStartTime = new Date(exam.startTime)
+                  const examEndTime = new Date(examStartTime.getTime() + exam.duration * 60000)
+                  const now = new Date()
+                  const isNotStarted = now < examStartTime
+                  const isOngoing = now >= examStartTime && now <= examEndTime
+                  const isEnded = now > examEndTime
+                  const submission = examSubmissionMap[exam.id]
+                  const hasStarted = !!submission
+                  const isFinished = !!submission?.finishedAt
+
+                  // Determine status
+                  let status: 'upcoming' | 'ongoing' | 'in-progress' | 'completed' | 'ended' = 'upcoming'
+                  if (!classroom.isTeacher) {
+                    if (isFinished) status = 'completed'
+                    else if (hasStarted && isOngoing) status = 'in-progress'
+                    else if (isEnded) status = 'ended'
+                    else if (isOngoing) status = 'ongoing'
+                  }
+
+                  return (
+                    <Card
+                      key={exam.id}
+                      className={`cursor-pointer transition-all ${
+                        status === 'completed'
+                          ? 'bg-gradient-to-r from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800'
+                          : status === 'in-progress'
+                          ? 'bg-gradient-to-r from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20 border-blue-200 dark:border-blue-800 shadow-lg'
+                          : status === 'ongoing'
+                          ? 'bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-800'
+                          : status === 'ended'
+                          ? 'bg-gradient-to-r from-gray-50/50 to-slate-50/50 dark:from-gray-950/20 dark:to-slate-950/20 border-gray-200 dark:border-gray-800 opacity-75'
+                          : 'hover:shadow-md border-border'
+                      }`}
+                      onClick={() => navigate(`/courses/${courseId}/exams/${exam.id}`)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CardTitle>{exam.title}</CardTitle>
+                              {!classroom.isTeacher && (
+                                <>
+                                  {status === 'completed' && (
+                                    <Badge className="bg-green-600 hover:bg-green-700">
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                      Completed
+                                    </Badge>
+                                  )}
+                                  {status === 'in-progress' && (
+                                    <Badge className="bg-blue-600 hover:bg-blue-700 animate-pulse">
+                                      <Clock className="mr-1 h-3 w-3" />
+                                      In Progress
+                                    </Badge>
+                                  )}
+                                  {status === 'ongoing' && (
+                                    <Badge className="bg-amber-600 hover:bg-amber-700">
+                                      <AlertCircle className="mr-1 h-3 w-3" />
+                                      Available Now
+                                    </Badge>
+                                  )}
+                                  {status === 'ended' && (
+                                    <Badge variant="secondary" className="opacity-75">
+                                      <Lock className="mr-1 h-3 w-3" />
+                                      Ended
+                                    </Badge>
+                                  )}
+                                  {status === 'upcoming' && (
+                                    <Badge variant="outline">
+                                      <Clock className="mr-1 h-3 w-3" />
+                                      Upcoming
+                                    </Badge>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            {exam.subtitle && (
+                              <CardTitle className="text-sm font-normal text-muted-foreground">{exam.subtitle}</CardTitle>
+                            )}
+                            {exam.description && (
+                              <CardDescription className="mt-1">
+                                {exam.description}
+                              </CardDescription>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="outline">
+                              {exam.problems?.length || 0} problems
+                            </Badge>
+                            <Badge variant="secondary">
+                              <Clock className="mr-1 h-3 w-3" />
+                              {exam.duration} min
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4 text-sm">
+                            <div className="flex items-center">
+                              <Calendar className="mr-1 h-3 w-3 text-muted-foreground" />
+                              <span className="font-medium">
+                                {formatDate(exam.startTime)} at {formatTime(exam.startTime)}
+                              </span>
+                            </div>
+                          </div>
+                          {classroom.isTeacher && (
+                            <Badge variant="outline" className="text-xs">
+                              {exam._count?.submissions || 0} submissions
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Exam Modal */}
+      <CreateExamModal
+        open={createExamModalOpen}
+        onOpenChange={setCreateExamModalOpen}
+        onSubmit={handleCreateExam}
+      />
     </BaseLayout>
   )
 }

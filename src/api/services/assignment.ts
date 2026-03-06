@@ -94,6 +94,105 @@ export interface SaveDraftDto {
   languageId: number
 }
 
+export interface Exam {
+  id: string
+  title: string
+  subtitle?: string
+  description?: string
+  startTime: Date
+  duration: number // in minutes
+  classroomId: string
+  createdAt: Date
+  updatedAt: Date
+  problems: ExamProblem[]
+  submissions?: ExamSubmission[]
+  classroom?: {
+    id: string
+    name: string
+    teacher: {
+      id: string
+      name: string
+      email: string
+    }
+  }
+  _count?: {
+    submissions: number
+  }
+}
+
+export interface ExamProblem {
+  id: string
+  examId: string
+  problemId: string
+  problem: {
+    id: string
+    title: string
+    description?: string
+    statement?: string
+    difficulty: "EASY" | "MEDIUM" | "HARD"
+    examples?: any[]
+    constraints?: string[]
+    tags?: string[]
+    hints?: string[]
+    companies?: string[]
+    // Include test cases and function metadata for code execution
+    testcases?: any[]
+    functionName?: string
+    parameters?: any
+    returnType?: string
+    codeStubs?: Record<string, string>
+    // hiddenTestcases excluded for security (only used for grading)
+  }
+}
+
+export interface ProctoringViolation {
+  type: string
+  timestamp: string
+  description?: string
+}
+
+export interface ExamSubmission {
+  id: string
+  examId: string
+  studentId: string
+  solutions: Record<string, { code: string; language: string }> // problemId -> solution
+  startedAt: Date
+  submittedAt: Date | null
+  finishedAt: Date | null
+  grade?: number
+  feedback?: string
+  proctoringViolations?: ProctoringViolation[]
+  tabSwitchCount?: number
+  fullscreenExitCount?: number
+  warningCount?: number
+  autoSubmitted?: boolean
+  createdAt: Date
+  updatedAt: Date
+  student?: {
+    id: string
+    name: string
+    email: string
+  }
+  exam?: {
+    id: string
+    title: string
+    startTime: Date
+    duration: number
+  }
+}
+
+export interface CreateExamDto {
+  title: string
+  subtitle?: string
+  description?: string
+  startTime: Date
+  duration: number
+  problems: Array<{
+    problemId: string
+    order: number
+  }>
+}
+
 export class AssignmentService {
   private baseURL = `${API_CONFIG.CLASSROOM_SERVICE_URL}/classroom`
 
@@ -251,6 +350,152 @@ export class AssignmentService {
     )
     const data = response.data as { assignment: Assignment }
     return data.assignment
+  }
+
+  // Exam methods
+  async getClassroomExams(classroomId: string): Promise<Exam[]> {
+    const response = await apiClient.get(
+      `${this.baseURL}/${classroomId}/exams`
+    )
+    const exams = (response.data as any).exams as Exam[]
+    return exams.map((exam: Exam) => ({
+      ...exam,
+      startTime: new Date(exam.startTime),
+      createdAt: new Date(exam.createdAt),
+      updatedAt: new Date(exam.updatedAt),
+    }))
+  }
+
+  async getExamById(examId: string): Promise<Exam> {
+    const response = await apiClient.get(`${this.baseURL}/exam/${examId}`)
+    const exam = (response.data as any).exam as Exam
+    return {
+      ...exam,
+      startTime: new Date(exam.startTime),
+      createdAt: new Date(exam.createdAt),
+      updatedAt: new Date(exam.updatedAt),
+    }
+  }
+
+  async createExam(
+    classroomId: string,
+    examData: CreateExamDto
+  ): Promise<Exam> {
+    const response = await apiClient.post(
+      `${this.baseURL}/${classroomId}/exam`,
+      examData
+    )
+    const exam = (response.data as any).exam as Exam
+    return {
+      ...exam,
+      startTime: new Date(exam.startTime),
+      createdAt: new Date(exam.createdAt),
+      updatedAt: new Date(exam.updatedAt),
+    }
+  }
+
+  async startExam(examId: string): Promise<ExamSubmission> {
+    const response = await apiClient.post(
+      `${this.baseURL}/exam/${examId}/start`
+    )
+    const submission = (response.data as any).submission as ExamSubmission
+    return {
+      ...submission,
+      startedAt: new Date(submission.startedAt),
+      submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+      finishedAt: submission.finishedAt ? new Date(submission.finishedAt) : null,
+      createdAt: new Date(submission.createdAt),
+      updatedAt: new Date(submission.updatedAt),
+    }
+  }
+
+  async getMyExamSubmission(examId: string): Promise<ExamSubmission | null> {
+    const response = await apiClient.get(
+      `${this.baseURL}/exam/${examId}/my-submission`
+    )
+    // Backend returns: { statusCode, data: { submission } | null, message, success }
+    // When no submission: data is null
+    // When has submission: data is { submission: {...} }
+    const responseData = response.data as any
+    
+    if (!responseData || responseData === null) {
+      return null
+    }
+    
+    const submission = responseData.submission as ExamSubmission | null
+    
+    if (!submission) {
+      return null
+    }
+    
+    return {
+      ...submission,
+      startedAt: new Date(submission.startedAt),
+      submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+      finishedAt: submission.finishedAt ? new Date(submission.finishedAt) : null,
+      createdAt: new Date(submission.createdAt),
+      updatedAt: new Date(submission.updatedAt),
+    }
+  }
+
+  async updateExamSubmission(
+    examId: string,
+    solutions: Record<string, { code: string; language: string }>
+  ): Promise<ExamSubmission> {
+    const response = await apiClient.put(
+      `${this.baseURL}/exam/${examId}/submission`,
+      { solutions }
+    )
+    const submission = (response.data as any).submission as ExamSubmission
+    return {
+      ...submission,
+      startedAt: new Date(submission.startedAt),
+      submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+      finishedAt: submission.finishedAt ? new Date(submission.finishedAt) : null,
+      createdAt: new Date(submission.createdAt),
+      updatedAt: new Date(submission.updatedAt),
+    }
+  }
+
+  async finishExam(examId: string): Promise<ExamSubmission> {
+    const response = await apiClient.post(
+      `${this.baseURL}/exam/${examId}/finish`
+    )
+    const submission = (response.data as any).submission as ExamSubmission
+    return {
+      ...submission,
+      startedAt: new Date(submission.startedAt),
+      submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+      finishedAt: submission.finishedAt ? new Date(submission.finishedAt) : null,
+      createdAt: new Date(submission.createdAt),
+      updatedAt: new Date(submission.updatedAt),
+    }
+  }
+
+  async logProctoringViolation(
+    examId: string,
+    violation: { type: string; timestamp: string; description?: string }
+  ): Promise<{ violationCount: number }> {
+    const response = await apiClient.post(
+      `${this.baseURL}/exam/${examId}/violation`,
+      violation
+    )
+    return response.data as { violationCount: number }
+  }
+
+  async getExamSubmissions(examId: string): Promise<ExamSubmission[]> {
+    const response = await apiClient.get(
+      `${this.baseURL}/exam/${examId}/submissions`
+    )
+    const submissions = (response.data as any).submissions as ExamSubmission[]
+    return submissions.map((submission: ExamSubmission) => ({
+      ...submission,
+      startedAt: new Date(submission.startedAt),
+      submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : null,
+      finishedAt: submission.finishedAt ? new Date(submission.finishedAt) : null,
+      createdAt: new Date(submission.createdAt),
+      updatedAt: new Date(submission.updatedAt),
+    }))
   }
 }
 

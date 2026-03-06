@@ -36,6 +36,7 @@ export default function CodePage() {
   const navigate = useNavigate()
   const problemId = searchParams.get('id')
   const assignmentId = searchParams.get('assignment')
+  const examId = searchParams.get('exam')
   const courseId = searchParams.get('course')
   const viewSubmission = searchParams.get('viewSubmission') === 'true'
   const viewOnly = searchParams.get('viewOnly') === 'true' // For locked assignments
@@ -79,9 +80,10 @@ export default function CodePage() {
     "go": 60,
   }
 
-  // Check if this is an assignment context
+  // Check if this is an assignment context or exam context
   const isAssignmentContext = Boolean(assignmentId && courseId)
-  const isReadOnly = !!studentId || viewOnly // Read-only if teacher viewing or assignment locked
+  const isExamContext = Boolean(examId && courseId)
+  const isReadOnly = !!studentId || viewOnly || isExamContext // Read-only if teacher viewing, assignment locked, or exam submission
 
   // Load submitted code when viewing a submission
   useEffect(() => {
@@ -101,34 +103,49 @@ export default function CodePage() {
             submissionData = await assignmentService.getMySubmission(assignmentId)
           }
 
-          if (submissionData && submissionData.solutions[problemId]) {
+          if (submissionData && submissionData.solutions) {
             const solution = submissionData.solutions[problemId]
-            setCode(solution.code)
-            codeRef.current = solution.code
-            const langId = LANGUAGE_NAME_TO_ID[solution.language] || 71
-            setLanguageId(langId)
-            languageRef.current = langId
-            setIsViewingSubmission(true)
-
-            if (studentId) {
-              toast.success(`Viewing ${submissionData.student?.name || "student"}'s submission`)
-            } else {
-              toast.success("Viewing your submitted solution")
-            }
-          } else {
-            if (studentId) {
-              toast.error("No submission found for this problem")
+            if (solution) {
+              setCode(solution.code || "")
+              const languageName = solution.language?.toLowerCase() || "python"
+              const langId = LANGUAGE_NAME_TO_ID[languageName] || 71
+              setLanguageId(langId)
+              setIsViewingSubmission(true)
             }
           }
-        } catch (error: any) {
-          console.error('Error loading submission:', error)
-          toast.error(error?.message || "Failed to load submission")
+        } catch (error) {
+          console.error("Failed to load submission:", error)
+          toast.error("Failed to load submission")
+        }
+      } else if (viewSubmission && isExamContext && problemId && examId && studentId) {
+        // Teacher viewing student's exam submission
+        try {
+          const submissions = await assignmentService.getExamSubmissions(examId)
+          const studentSubmission = submissions.find(s => s.studentId === studentId)
+          
+          if (studentSubmission) {
+            if (studentSubmission.student) {
+              setViewingStudentName(studentSubmission.student.name)
+            }
+            
+            const solutions = studentSubmission.solutions as Record<string, any>
+            const solution = solutions[problemId]
+            if (solution) {
+              setCode(solution.code || "")
+              const langId = solution.languageId || 71
+              setLanguageId(langId)
+              setIsViewingSubmission(true)
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load exam submission:", error)
+          toast.error("Failed to load exam submission")
         }
       }
     }
 
     loadSubmission()
-  }, [viewSubmission, isAssignmentContext, assignmentId, problemId, studentId])
+  }, [viewSubmission, isAssignmentContext, isExamContext, assignmentId, examId, problemId, studentId])
 
   // Load test cases for teachers viewing student submissions
   useEffect(() => {
