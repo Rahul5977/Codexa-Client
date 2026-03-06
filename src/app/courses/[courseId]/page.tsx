@@ -26,11 +26,15 @@ import {
   FileText,
   Mail,
   Plus,
-  Clock
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  Lock
 } from "lucide-react"
 import { classroomService, type Classroom, type Student } from "@/api/services/classroom"
 import { assignmentService, type Assignment } from "@/api/services/assignment"
 import { BaseLayout } from "@/components/layouts/base-layout"
+import { isAfter } from "date-fns"
 
 export default function CourseDetailsPage() {
   const params = useParams()
@@ -42,6 +46,7 @@ export default function CourseDetailsPage() {
   const [classroom, setClassroom] = useState<Classroom | null>(null)
   const [students, setStudents] = useState<Student[]>([])
   const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [submissionMap, setSubmissionMap] = useState<Record<string, any>>({}) // assignmentId -> submission
   const [activeTab, setActiveTab] = useState("assignments")
 
   useEffect(() => {
@@ -62,8 +67,30 @@ export default function CourseDetailsPage() {
         classroomService.getClassroomStudents(courseId).catch(() => ({ students: [], totalStudents: 0 }))
       ])
 
-      setAssignments(assignmentsResponse.assignments || [])
+      const assignmentsList = assignmentsResponse.assignments || []
+      setAssignments(assignmentsList)
       setStudents(studentsResponse.students || [])
+
+      // If student, fetch submission status for each assignment
+      if (!classroomData.isTeacher && assignmentsList.length > 0) {
+        const submissionPromises = assignmentsList.map(async (assignment: Assignment) => {
+          try {
+            const submission = await assignmentService.getMySubmission(assignment.id)
+            return { assignmentId: assignment.id, submission }
+          } catch {
+            return { assignmentId: assignment.id, submission: null }
+          }
+        })
+
+        const submissionResults = await Promise.all(submissionPromises)
+        const submissionData: Record<string, any> = {}
+        submissionResults.forEach(({ assignmentId, submission }) => {
+          if (submission) {
+            submissionData[assignmentId] = submission
+          }
+        })
+        setSubmissionMap(submissionData)
+      }
     } catch (error: any) {
       console.error("Error fetching classroom details:", error)
       toast({
@@ -222,38 +249,100 @@ export default function CourseDetailsPage() {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {assignments.map((assignment) => (
-                  <Card
-                    key={assignment.id}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => navigate(`/courses/${courseId}/assignments/${assignment.id}`)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle>{assignment.title}</CardTitle>
-                          <CardTitle className="text-sm font-normal text-muted-foreground">{assignment.subtitle}</CardTitle>
-                          <CardDescription className="mt-1">
-                            {assignment.description}
-                          </CardDescription>
+                {assignments.map((assignment) => {
+                  const isPastDeadline = isAfter(new Date(), new Date(assignment.deadline))
+                  const submission = submissionMap[assignment.id]
+                  const isGraded = submission?.grade !== null && submission?.grade !== undefined
+                  const isSubmitted = !!submission
+                  const isLocked = isGraded || isPastDeadline
+                  
+                  // Determine status for students
+                  let status: 'ongoing' | 'submitted' | 'graded' | 'overdue' = 'ongoing'
+                  if (!classroom.isTeacher) {
+                    if (isGraded) status = 'graded'
+                    else if (isSubmitted) status = 'submitted'
+                    else if (isPastDeadline) status = 'overdue'
+                  }
+
+                  return (
+                    <Card
+                      key={assignment.id}
+                      className={`cursor-pointer transition-all ${
+                        status === 'graded' 
+                          ? 'bg-gradient-to-r from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800 hover:shadow-green-100 dark:hover:shadow-green-900/20'
+                          : status === 'submitted'
+                          ? 'bg-gradient-to-r from-blue-50/50 to-sky-50/50 dark:from-blue-950/20 dark:to-sky-950/20 border-blue-200 dark:border-blue-800'
+                          : status === 'overdue'
+                          ? 'bg-gradient-to-r from-red-50/50 to-rose-50/50 dark:from-red-950/20 dark:to-rose-950/20 border-red-200 dark:border-red-800 opacity-75'
+                          : 'hover:shadow-md border-border'
+                      }`}
+                      onClick={() => navigate(`/courses/${courseId}/assignments/${assignment.id}`)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CardTitle>{assignment.title}</CardTitle>
+                              {!classroom.isTeacher && (
+                                <>
+                                  {status === 'graded' && (
+                                    <Badge className="bg-green-600 hover:bg-green-700">
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                      Graded {submission.grade}/100
+                                    </Badge>
+                                  )}
+                                  {status === 'submitted' && (
+                                    <Badge className="bg-blue-600 hover:bg-blue-700">
+                                      <CheckCircle className="mr-1 h-3 w-3" />
+                                      Submitted
+                                    </Badge>
+                                  )}
+                                  {status === 'overdue' && (
+                                    <Badge variant="destructive">
+                                      <Lock className="mr-1 h-3 w-3" />
+                                      Overdue
+                                    </Badge>
+                                  )}
+                                  {status === 'ongoing' && (
+                                    <Badge variant="secondary" className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                                      <AlertCircle className="mr-1 h-3 w-3" />
+                                      Active
+                                    </Badge>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <CardTitle className="text-sm font-normal text-muted-foreground">{assignment.subtitle}</CardTitle>
+                            <CardDescription className="mt-1">
+                              {assignment.description}
+                            </CardDescription>
+                          </div>
+                          <Badge variant="outline">
+                            {assignment.problems?.length || 0} problems
+                          </Badge>
                         </div>
-                        <Badge variant="outline">
-                          {assignment.problems?.length || 0} problems
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center space-x-4 text-sm">
-                        <div className="flex items-center">
-                          <Clock className="mr-1 h-3 w-3 text-red-600" />
-                          <span className="font-bold text-red-600">
-                            Due: {formatDate(assignment.deadline)} at {formatTime(assignment.deadline)}
-                          </span>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4 text-sm">
+                            <div className="flex items-center">
+                              <Clock className={`mr-1 h-3 w-3 ${isPastDeadline ? 'text-red-600' : 'text-orange-600'}`} />
+                              <span className={`font-bold ${isPastDeadline ? 'text-red-600' : 'text-orange-600'}`}>
+                                Due: {formatDate(assignment.deadline)} at {formatTime(assignment.deadline)}
+                              </span>
+                            </div>
+                          </div>
+                          {!classroom.isTeacher && isLocked && (
+                            <Badge variant="outline" className="text-xs">
+                              <Lock className="mr-1 h-3 w-3" />
+                              View Only
+                            </Badge>
+                          )}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             )}
           </TabsContent>

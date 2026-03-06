@@ -94,6 +94,10 @@ export const routes: RouteConfig[] = [
 
   // Course Assignment Routes
   {
+    path: "/courses/:courseId",
+    element: <ProtectedRoute><CourseAssignmentsPage /></ProtectedRoute>
+  },
+  {
     path: "/courses/:courseId/assignments",
     element: <ProtectedRoute><CourseAssignmentsPage /></ProtectedRoute>
   },

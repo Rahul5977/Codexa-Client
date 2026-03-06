@@ -21,6 +21,7 @@ interface CodeEditorProps {
   onCodeChange?: (code: string, languageId: number) => void
   initialCode?: string
   initialLanguage?: string
+  readOnly?: boolean
 }
 
 // Language ID mapping for Judge0
@@ -46,7 +47,7 @@ const DEFAULT_CODE_TEMPLATES = {
   rust: ""
 }
 
-export function CodeEditor({ problem, loading, onCodeChange, initialCode, initialLanguage }: CodeEditorProps) {
+export function CodeEditor({ problem, loading, onCodeChange, initialCode, initialLanguage, readOnly = false }: CodeEditorProps) {
   const { theme } = useTheme()
   const [selectedLanguage, setSelectedLanguage] = useState(initialLanguage || "python")
   const [code, setCode] = useState(initialCode || "")
@@ -179,8 +180,8 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
             <div className="flex items-center gap-3">
 
               {/* Language Selector */}
-              <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="text-sm font-medium border-border/60 bg-background/80 hover:bg-background hover:border-primary/40 transition-all shadow-sm">
+              <Select value={selectedLanguage} onValueChange={handleLanguageChange} disabled={readOnly}>
+                <SelectTrigger className="text-sm font-medium border-border/60 bg-background/80 hover:bg-background hover:border-primary/40 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                   <SelectValue placeholder="Language" />
                 </SelectTrigger>
                 <SelectContent>
@@ -247,7 +248,8 @@ export function CodeEditor({ problem, loading, onCodeChange, initialCode, initia
                   wordWrap: "off",
                   padding: { top: 20, bottom: 20 },
                   suggestOnTriggerCharacters: true,
-                  quickSuggestions: {
+                  readOnly: readOnly,
+                  quickSuggestions: readOnly ? false : {
                     other: true,
                     comments: true,
                     strings: true

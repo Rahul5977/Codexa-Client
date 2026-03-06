@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import {
   Dialog,
   DialogContent,
@@ -30,11 +31,13 @@ import {
 import { assignmentService, type Assignment, type AssignmentSubmission } from "@/api/services/assignment"
 import { format, isAfter } from "date-fns"
 import { BaseLayout } from "@/components/layouts/base-layout"
+import { TeacherView } from "./components/teacher-view"
 
 export default function AssignmentDetailPage() {
   const { courseId, assignmentId } = useParams()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -42,6 +45,7 @@ export default function AssignmentDetailPage() {
   const [submission, setSubmission] = useState<AssignmentSubmission | null>(null)
   const [solutions, setSolutions] = useState<Record<string, { code: string; language: string }>>({})
   const [showSubmitDialog, setShowSubmitDialog] = useState(false)
+  const [isTeacher, setIsTeacher] = useState(false)
 
   // Map Judge0 language IDs to language names
   const LANGUAGE_ID_TO_NAME: Record<number, string> = {
@@ -62,33 +66,41 @@ export default function AssignmentDetailPage() {
 
     try {
       setLoading(true)
-      const [assignmentData, submissionData, drafts] = await Promise.all([
-        assignmentService.getAssignmentById(assignmentId),
-        assignmentService.getMySubmission(assignmentId),
-        assignmentService.getAssignmentDrafts(assignmentId).catch(() => [])
-      ])
-
+      const assignmentData = await assignmentService.getAssignmentById(assignmentId)
       setAssignment(assignmentData)
-      setSubmission(submissionData)
 
-      if (submissionData) {
-        setSolutions(submissionData.solutions)
-      } else {
-        // Initialize solutions from drafts if available, otherwise empty
-        const draftSolutions: Record<string, { code: string; language: string }> = {}
+      // Check if current user is the teacher
+      const userIsTeacher = user?.id === assignmentData.classroom?.teacher?.id
+      setIsTeacher(userIsTeacher)
 
-        if (assignmentData.problems && Array.isArray(assignmentData.problems)) {
-          assignmentData.problems.forEach(ap => {
-            // Check if there's a draft for this problem
-            const draft = drafts.find(d => d.problemId === ap.problemId)
-            draftSolutions[ap.problemId] = {
-              code: draft?.code || '',
-              language: LANGUAGE_ID_TO_NAME[draft?.languageId || 71] || 'python'
-            }
-          })
+      // Only fetch student-specific data if user is a student
+      if (!userIsTeacher) {
+        const [submissionData, drafts] = await Promise.all([
+          assignmentService.getMySubmission(assignmentId),
+          assignmentService.getAssignmentDrafts(assignmentId).catch(() => [])
+        ])
+
+        setSubmission(submissionData)
+
+        if (submissionData) {
+          setSolutions(submissionData.solutions)
+        } else {
+          // Initialize solutions from drafts if available, otherwise empty
+          const draftSolutions: Record<string, { code: string; language: string }> = {}
+
+          if (assignmentData.problems && Array.isArray(assignmentData.problems)) {
+            assignmentData.problems.forEach(ap => {
+              // Check if there's a draft for this problem
+              const draft = drafts.find(d => d.problemId === ap.problemId)
+              draftSolutions[ap.problemId] = {
+                code: draft?.code || '',
+                language: LANGUAGE_ID_TO_NAME[draft?.languageId || 71] || 'python'
+              }
+            })
+          }
+
+          setSolutions(draftSolutions)
         }
-
-        setSolutions(draftSolutions)
       }
     } catch (error) {
       console.error("Error fetching assignment data:", error)
@@ -104,14 +116,20 @@ export default function AssignmentDetailPage() {
 
   const handleProblemClick = (problemId: string, viewSubmission = false) => {
     if (viewSubmission && submission) {
-      // Navigate to code editor with submission data
+      // Navigate to code editor with submission data (read-only)
       const solution = submission.solutions[problemId]
       if (solution) {
         navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}&viewSubmission=true`)
       }
     } else {
-      // Navigate to code editor for solving/editing
-      navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`)
+      // Check if assignment is locked (graded or past deadline)
+      const isGraded = submission?.grade !== null && submission?.grade !== undefined
+      const isPastDeadline = assignment?.deadline ? isAfter(new Date(), new Date(assignment.deadline)) : false
+      const isLocked = isGraded || isPastDeadline
+      
+      // Navigate to code editor (read-only if locked)
+      const url = `/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`
+      navigate(isLocked ? `${url}&viewOnly=true` : url)
     }
   }
 
@@ -121,6 +139,17 @@ export default function AssignmentDetailPage() {
 
   const handleResubmit = async () => {
     if (!assignmentId) return
+
+    // Check if assignment is graded - cannot resubmit if graded
+    const isGraded = submission?.grade !== null && submission?.grade !== undefined
+    if (isGraded) {
+      toast({
+        title: "Cannot Resubmit",
+        description: "This assignment has been graded and cannot be resubmitted.",
+        variant: "destructive",
+      })
+      return
+    }
 
     try {
       // Delete the existing submission by setting solutions to empty drafts
@@ -179,6 +208,8 @@ export default function AssignmentDetailPage() {
   }
 
   const isOverdue = assignment?.deadline ? isAfter(new Date(), new Date(assignment.deadline)) : false
+  const isGraded = submission?.grade !== null && submission?.grade !== undefined
+  const isLocked = isGraded || isOverdue
   const canSubmit = assignment && !isOverdue && !submission
 
   if (loading) {
@@ -225,11 +256,22 @@ export default function AssignmentDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">{assignment.title}</h1>
-                {submission ? (
+                {isTeacher ? (
                   <Badge variant="default">
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Submitted
+                    Teacher View
                   </Badge>
+                ) : submission ? (
+                  <>
+                    <Badge variant="default">
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Submitted
+                    </Badge>
+                    {submission.grade !== null && submission.grade !== undefined && (
+                      <Badge className="text-base px-3 py-1 bg-blue-600 hover:bg-blue-700">
+                        Grade: {submission.grade}/100
+                      </Badge>
+                    )}
+                  </>
                 ) : isOverdue ? (
                   <Badge variant="destructive">
                     <Clock className="mr-2 h-4 w-4" />
@@ -265,12 +307,21 @@ export default function AssignmentDetailPage() {
 
         <Separator className="mb-8" />
 
-        {/* Problems List */}
-        <div className="grid gap-6">
+        {/* Conditional Rendering: Teacher View or Student View */}
+        {isTeacher ? (
+          <TeacherView 
+            assignment={assignment} 
+            courseId={courseId!} 
+            assignmentId={assignmentId!} 
+          />
+        ) : (
+          <>
+            {/* Student View - Problems List */}
+            <div className="grid gap-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-semibold">Problems</h2>
             <div className="flex gap-2">
-              {submission && !isOverdue && (
+              {submission && !isLocked && (
                 <Button onClick={handleResubmit} variant="outline" size="lg">
                   <Code className="mr-2 h-4 w-4" />
                   Resubmit Assignment
@@ -281,6 +332,11 @@ export default function AssignmentDetailPage() {
                   <Send className="mr-2 h-4 w-4" />
                   Submit Assignment
                 </Button>
+              )}
+              {isLocked && (
+                <Badge variant="secondary" className="text-sm px-3 py-2">
+                  {isGraded ? "Graded - View Only" : "Deadline Passed - View Only"}
+                </Badge>
               )}
             </div>
           </div>
@@ -355,12 +411,13 @@ export default function AssignmentDetailPage() {
                           <Button
                             variant="outline"
                             onClick={() => handleProblemClick(problem.id, false)}
+                            disabled={isLocked}
                           >
                             <ExternalLink className="mr-2 h-4 w-4" />
                             {hasSolution ? 'Continue' : 'Solve Problem'}
                           </Button>
                         )}
-                        {submission && !isOverdue && (
+                        {submission && !isLocked && (
                           <Button
                             onClick={() => handleProblemClick(problem.id, false)}
                           >
@@ -387,7 +444,7 @@ export default function AssignmentDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Submitted At</div>
                   <div>{format(new Date(submission.submittedAt), "MMM d, yyyy 'at' h:mm a")}</div>
@@ -398,26 +455,38 @@ export default function AssignmentDetailPage() {
                     {assignment.deadline ? format(new Date(assignment.deadline), "MMM d, yyyy 'at' h:mm a") : 'No deadline'}
                   </div>
                 </div>
-                {submission.grade !== null && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Grade</div>
-                    <div className="text-2xl font-bold">{submission.grade}/100</div>
-                  </div>
-                )}
-                {submission.feedback && (
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground">Teacher Feedback</div>
-                    <div className="mt-1 p-3 bg-muted rounded-lg">{submission.feedback}</div>
-                  </div>
-                )}
               </div>
+              {submission.grade !== null && submission.grade !== undefined && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Your Grade</div>
+                      <div className="text-4xl font-bold text-blue-900 dark:text-blue-100">{submission.grade}/100</div>
+                    </div>
+                    {submission.grade >= 90 ? (
+                      <Badge className="text-lg px-4 py-2 bg-green-600">Excellent</Badge>
+                    ) : submission.grade >= 75 ? (
+                      <Badge className="text-lg px-4 py-2 bg-blue-600">Good</Badge>
+                    ) : submission.grade >= 60 ? (
+                      <Badge className="text-lg px-4 py-2 bg-yellow-600">Satisfactory</Badge>
+                    ) : (
+                      <Badge className="text-lg px-4 py-2 bg-red-600" variant="destructive">Needs Improvement</Badge>
+                    )}
+                  </div>
+                </div>
+              )}
+              {submission.feedback && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium text-muted-foreground mb-2">Teacher Feedback</div>
+                  <div className="p-4 bg-muted rounded-lg border border-border">{submission.feedback}</div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
-      </div>
 
-      {/* Submit Confirmation Dialog */}
-      <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+        {/* Submit Confirmation Dialog */}
+        <Dialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Submit Assignment</DialogTitle>
@@ -468,6 +537,9 @@ export default function AssignmentDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+          </>
+        )}
+      </div>
     </BaseLayout>
   )
 }

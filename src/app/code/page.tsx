@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { assignmentService } from "@/api/services/assignment"
+import { getProblemTestCases, type TestCase } from "@/api/services/problem"
 
 // Map Judge0 language IDs to code stub keys
 const LANGUAGE_ID_TO_STUB_KEY: Record<number, string> = {
@@ -37,6 +38,8 @@ export default function CodePage() {
   const assignmentId = searchParams.get('assignment')
   const courseId = searchParams.get('course')
   const viewSubmission = searchParams.get('viewSubmission') === 'true'
+  const viewOnly = searchParams.get('viewOnly') === 'true' // For locked assignments
+  const studentId = searchParams.get('studentId') // For teachers viewing student code
   const { user } = useAuth()
   const { problem, loading: problemLoading, error: problemError } = useProblem(problemId)
   const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading } = useCodeExecution()
@@ -50,6 +53,8 @@ export default function CodePage() {
   const [solutionSaved, setSolutionSaved] = useState(false)
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null)
   const [isViewingSubmission, setIsViewingSubmission] = useState(false)
+  const [viewingStudentName, setViewingStudentName] = useState<string | null>(null)
+  const [teacherTestCases, setTeacherTestCases] = useState<{ testcases: TestCase[]; hiddenTestcases: TestCase[] } | null>(null)
 
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
@@ -76,13 +81,26 @@ export default function CodePage() {
 
   // Check if this is an assignment context
   const isAssignmentContext = Boolean(assignmentId && courseId)
+  const isReadOnly = !!studentId || viewOnly // Read-only if teacher viewing or assignment locked
 
   // Load submitted code when viewing a submission
   useEffect(() => {
     const loadSubmission = async () => {
       if (viewSubmission && isAssignmentContext && problemId && assignmentId) {
         try {
-          const submissionData = await assignmentService.getMySubmission(assignmentId)
+          let submissionData
+          
+          // If studentId is provided, teacher is viewing student's code
+          if (studentId) {
+            submissionData = await assignmentService.getStudentSubmission(assignmentId, studentId)
+            if (submissionData?.student) {
+              setViewingStudentName(submissionData.student.name)
+            }
+          } else {
+            // Student viewing their own submission
+            submissionData = await assignmentService.getMySubmission(assignmentId)
+          }
+          
           if (submissionData && submissionData.solutions[problemId]) {
             const solution = submissionData.solutions[problemId]
             setCode(solution.code)
@@ -91,17 +109,43 @@ export default function CodePage() {
             setLanguageId(langId)
             languageRef.current = langId
             setIsViewingSubmission(true)
-            toast.success("Viewing your submitted solution")
+            
+            if (studentId) {
+              toast.success(`Viewing ${submissionData.student?.name || "student"}'s submission`)
+            } else {
+              toast.success("Viewing your submitted solution")
+            }
+          } else {
+            if (studentId) {
+              toast.error("No submission found for this problem")
+            }
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error loading submission:', error)
-          toast.error("Failed to load submission")
+          toast.error(error?.message || "Failed to load submission")
         }
       }
     }
 
     loadSubmission()
-  }, [viewSubmission, isAssignmentContext, assignmentId, problemId])
+  }, [viewSubmission, isAssignmentContext, assignmentId, problemId, studentId])
+
+  // Load test cases for teachers viewing student submissions
+  useEffect(() => {
+    const loadTestCases = async () => {
+      if (studentId && problemId) {
+        try {
+          const testCases = await getProblemTestCases(problemId)
+          setTeacherTestCases(testCases)
+        } catch (error: any) {
+          console.error('Error loading test cases:', error)
+          // Don't show error toast for test cases - they're optional for grading
+        }
+      }
+    }
+
+    loadTestCases()
+  }, [studentId, problemId])
 
   // Load saved draft for assignment context from API
   useEffect(() => {
@@ -217,6 +261,45 @@ export default function CodePage() {
       toast.error("Failed to run code. Please try again.")
     }
   }, [code, languageId, runCodeMultiple, setActiveTab, problem, problemId])
+
+  const handleRunAllTestCases = useCallback(async () => {
+    if (!code || code.trim() === '') {
+      toast.error("No code to run")
+      return
+    }
+
+    if (!teacherTestCases) {
+      toast.error("Test cases not loaded")
+      return
+    }
+
+    const allTestCases = [
+      ...teacherTestCases.testcases.map((tc) => ({
+        input: tc.input,
+        expectedOutput: tc.output
+      })),
+      ...teacherTestCases.hiddenTestcases.map((tc) => ({
+        input: tc.input,
+        expectedOutput: tc.output
+      }))
+    ]
+
+    if (allTestCases.length === 0) {
+      toast.error("No test cases available")
+      return
+    }
+
+    setActiveTab("testcases")
+    toast.info(`Running code against ${allTestCases.length} test case(s) (${teacherTestCases.testcases.length} visible + ${teacherTestCases.hiddenTestcases.length} hidden)...`)
+
+    try {
+      await runCodeMultiple(allTestCases, code, languageId, problemId || '')
+      toast.success("Code execution completed!")
+    } catch (error) {
+      console.error("Run error:", error)
+      toast.error("Failed to run code. Please try again.")
+    }
+  }, [code, languageId, runCodeMultiple, setActiveTab, teacherTestCases, problemId])
 
   const handleSubmit = useCallback(async () => {
     if (!user) {
@@ -458,25 +541,51 @@ export default function CodePage() {
                           <Plus className="h-3.5 w-3.5 mr-1.5" />
                           Add Test
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleRun}
-                          disabled={isRunning}
-                          className="h-8 px-2 md:px-4 text-xs bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 font-semibold"
-                        >
-                          {isRunning ? (
-                            <>
-                              <Square className="h-3.5 w-3.5 md:mr-1.5" />
-                              <span className="hidden md:inline">Running...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-3.5 w-3.5" />
-                            </>
-                          )}
-                        </Button>
+                        
+                        {/* Teacher viewing student submission - Run against all test cases */}
+                        {studentId ? (
+                          <Button
+                            size="sm"
+                            onClick={handleRunAllTestCases}
+                            disabled={isRunning || !teacherTestCases}
+                            className="h-8 px-2 md:px-4 text-xs bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/20 font-semibold disabled:opacity-50"
+                            title={!teacherTestCases ? "Loading test cases..." : "Run against all test cases (visible + hidden)"}
+                          >
+                            {isRunning ? (
+                              <>
+                                <Square className="h-3.5 w-3.5 md:mr-1.5" />
+                                <span className="hidden md:inline">Running...</span>
+                              </>
+                            ) : (
+                              <>
+                                <TestTube className="h-3.5 w-3.5 md:mr-1.5" />
+                                <span className="hidden md:inline">
+                                  {teacherTestCases ? "Run All Tests" : "Loading Tests..."}
+                                </span>
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={handleRun}
+                            disabled={isRunning}
+                            className="h-8 px-2 md:px-4 text-xs bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20 font-semibold"
+                          >
+                            {isRunning ? (
+                              <>
+                                <Square className="h-3.5 w-3.5 md:mr-1.5" />
+                                <span className="hidden md:inline">Running...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="h-3.5 w-3.5" />
+                              </>
+                            )}
+                          </Button>
+                        )}
 
-                        {isAssignmentContext ? (
+                        {isAssignmentContext && !studentId && !viewOnly ? (
                           <>
                             <Button
                               size="sm"
@@ -496,7 +605,27 @@ export default function CodePage() {
                               <span className="hidden md:inline">Back</span>
                             </Button>
                           </>
-                        ) : (
+                        ) : viewOnly ? (
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/courses/${courseId}/assignments/${assignmentId}`)}
+                            variant="outline"
+                            className="h-8 px-2 md:px-4 text-xs font-semibold"
+                          >
+                            <ArrowLeft className="h-3.5 w-3.5 md:mr-1.5" />
+                            <span className="hidden md:inline">Back</span>
+                          </Button>
+                        ) : studentId ? (
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/courses/${courseId}/assignments/${assignmentId}`)}
+                            variant="outline"
+                            className="h-8 px-2 md:px-4 text-xs font-semibold"
+                          >
+                            <ArrowLeft className="h-3.5 w-3.5 md:mr-1.5" />
+                            <span className="hidden md:inline">Back to Grading</span>
+                          </Button>
+                        ) : !isAssignmentContext ? (
                           <Button
                             size="sm"
                             onClick={handleSubmit}
@@ -505,32 +634,72 @@ export default function CodePage() {
                             <Zap className="h-3.5 w-3.5 md:mr-1.5" />
                             <span className="hidden md:inline">Submit</span>
                           </Button>
-                        )}
+                        ) : null}
                       </div>
                     </div>
                   </div>
 
                   <TabsContent value="code" className={cn("flex-1 m-0 flex flex-col", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
-                    {isViewingSubmission && (
-                      <div className="bg-blue-50 dark:bg-blue-950 border-b border-blue-200 dark:border-blue-800 px-4 py-2 flex items-center justify-between">
+                    {(isViewingSubmission || viewOnly) && (
+                      <div className={cn(
+                        "border-b px-4 py-2 flex items-center justify-between",
+                        studentId 
+                          ? "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800" 
+                          : viewOnly
+                          ? "bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800"
+                          : "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800"
+                      )}>
                         <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                            Viewing Submitted Solution
+                          <FileText className={cn(
+                            "h-4 w-4",
+                            studentId 
+                              ? "text-purple-600 dark:text-purple-400" 
+                              : viewOnly
+                              ? "text-orange-600 dark:text-orange-400"
+                              : "text-blue-600 dark:text-blue-400"
+                          )} />
+                          <span className={cn(
+                            "text-sm font-medium",
+                            studentId 
+                              ? "text-purple-700 dark:text-purple-300" 
+                              : viewOnly
+                              ? "text-orange-700 dark:text-orange-300"
+                              : "text-blue-700 dark:text-blue-300"
+                          )}>
+                            {studentId 
+                              ? `Viewing ${viewingStudentName || "Student"}'s Submission` 
+                              : viewOnly
+                              ? "Assignment Locked - View Only (Graded or Deadline Passed)"
+                              : "Viewing Your Submitted Solution"}
                           </span>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setIsViewingSubmission(false)
-                            navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`)
-                          }}
-                          className="h-7 text-xs"
-                        >
-                          <Code2 className="h-3 w-3 mr-1" />
-                          Edit Solution
-                        </Button>
+                        {!studentId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setIsViewingSubmission(false)
+                              navigate(`/code?id=${problemId}&assignment=${assignmentId}&course=${courseId}`)
+                            }}
+                            className="h-7 text-xs"
+                          >
+                            <Code2 className="h-3 w-3 mr-1" />
+                            Edit Solution
+                          </Button>
+                        )}
+                        {studentId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              navigate(`/courses/${courseId}/assignments/${assignmentId}`)
+                            }}
+                            className="h-7 text-xs"
+                          >
+                            <ArrowLeft className="h-3 w-3 mr-1" />
+                            Back to Submissions
+                          </Button>
+                        )}
                       </div>
                     )}
                     <div className="flex-1 overflow-hidden">
@@ -540,6 +709,7 @@ export default function CodePage() {
                         onCodeChange={handleCodeChange}
                         initialCode={code}
                         initialLanguage={LANGUAGE_ID_TO_STUB_KEY[languageId] || "python"}
+                        readOnly={isReadOnly}
                       />
                     </div>
                   </TabsContent>
@@ -551,6 +721,7 @@ export default function CodePage() {
                       runResults={runResults}
                       submission={submission}
                       isRunning={isRunning}
+                      teacherTestCases={teacherTestCases}
                     />
                   </TabsContent>
 

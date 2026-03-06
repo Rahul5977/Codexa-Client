@@ -117,3 +117,17 @@ export const deleteProblem = async (id: string): Promise<void> => {
     import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
   await apiClient.delete(`${problemServiceUrl}/problems/${id}`)
 }
+
+/**
+ * Get test cases for a problem (Teacher only - for grading)
+ */
+export const getProblemTestCases = async (
+  id: string
+): Promise<{ id: string; testcases: TestCase[]; hiddenTestcases: TestCase[] }> => {
+  const problemServiceUrl =
+    import.meta.env.VITE_PROBLEM_SERVICE_URL || "http://localhost:8002/api"
+  const response = await apiClient.get<any>(
+    `${problemServiceUrl}/problems/${id}/testcases`
+  )
+  return response.data
+}

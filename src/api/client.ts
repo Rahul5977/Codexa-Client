@@ -33,6 +33,11 @@ class ApiClient {
     const refreshToken = localStorage.getItem('refreshToken')
     
     if (!refreshToken) {
+      this.authToken = null
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('refreshToken')
+      localStorage.removeItem('user')
+      window.location.href = '/auth/sign-in'
       throw new Error('No refresh token available')
     }
 
@@ -47,7 +52,18 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        throw new Error('Token refresh failed')
+        const errorData = await response.json().catch(() => ({}))
+        
+        // Only clear auth if refresh token is invalid (401/403)
+        if (response.status === 401 || response.status === 403) {
+          this.authToken = null
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          localStorage.removeItem('user')
+          window.location.href = '/auth/sign-in'
+        }
+        
+        throw new Error(`Token refresh failed: ${response.status}`)
       }
 
       const data = await response.json()
@@ -56,17 +72,9 @@ class ApiClient {
       // Update tokens
       this.authToken = newAccessToken
       localStorage.setItem('accessToken', newAccessToken)
-
+      
       return newAccessToken
     } catch (error) {
-      // Clear auth state if refresh fails
-      this.authToken = null
-      localStorage.removeItem('accessToken')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
-      
-      // Redirect to login
-      window.location.href = '/auth/login'
       throw error
     }
   }
@@ -125,8 +133,14 @@ class ApiClient {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         
+        // Handle 403 Forbidden - don't try to refresh, just throw error
+        if (response.status === 403) {
+          const errorMessage = errorData.message || errorData.error || 'Access forbidden'
+          throw new Error(errorMessage)
+        }
+        
         // Handle 401 Unauthorized - try to refresh token
-        if (response.status === 401 && !endpoint.includes('/auth/refresh') && !endpoint.includes('/auth/login')) {
+        if (response.status === 401 && !endpoint.includes('/auth/refresh') && !endpoint.includes('/auth/sign-in')) {
           if (this.isRefreshing) {
             // If already refreshing, queue this request
             return new Promise((resolve, reject) => {

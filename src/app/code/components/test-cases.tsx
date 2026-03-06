@@ -17,6 +17,7 @@ interface TestCase {
   status?: 'pending' | 'passed' | 'failed' | 'error' | 'running'
   executionTime?: number
   isCustom?: boolean
+  isHidden?: boolean
 }
 
 interface TestCasesProps {
@@ -25,9 +26,10 @@ interface TestCasesProps {
   runResults?: RunCodeResult[]
   submission?: SubmissionResult | null
   isRunning?: boolean
+  teacherTestCases?: { testcases: { input: string; output: string }[]; hiddenTestcases: { input: string; output: string }[] } | null
 }
 
-export function TestCases({ problem, loading, runResults, submission, isRunning }: TestCasesProps) {
+export function TestCases({ problem, loading, runResults, submission, isRunning, teacherTestCases }: TestCasesProps) {
   
   const getStatusIcon = (status: TestCase['status']) => {
     switch (status) {
@@ -64,7 +66,27 @@ export function TestCases({ problem, loading, runResults, submission, isRunning 
   // Build test cases from problem or results
   const testCases: TestCase[] = []
   
-  if (problem?.examples) {
+  // If teacher test cases are provided, use them instead of problem examples
+  if (teacherTestCases) {
+    teacherTestCases.testcases.forEach((tc, index) => {
+      testCases.push({
+        id: `visible-${index}`,
+        input: tc.input,
+        expectedOutput: tc.output,
+        status: isRunning ? 'running' : 'pending',
+        isHidden: false
+      })
+    })
+    teacherTestCases.hiddenTestcases.forEach((tc, index) => {
+      testCases.push({
+        id: `hidden-${index}`,
+        input: tc.input,
+        expectedOutput: tc.output,
+        status: isRunning ? 'running' : 'pending',
+        isHidden: true
+      })
+    })
+  } else if (problem?.examples) {
     problem.examples.forEach((example, index) => {
       testCases.push({
         id: `example-${index}`,
@@ -189,6 +211,11 @@ export function TestCases({ problem, loading, runResults, submission, isRunning 
                         <Badge className={cn("text-xs font-semibold ml-2", getStatusColor(testCase.status))}>
                           {testCase.status || 'pending'}
                         </Badge>
+                        {testCase.isHidden && (
+                          <Badge className="text-xs font-semibold ml-2 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+                            Hidden
+                          </Badge>
+                        )}
                       </div>
                     </div>
 

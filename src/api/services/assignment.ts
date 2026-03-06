@@ -167,6 +167,24 @@ export class AssignmentService {
     }
   }
 
+  async getStudentSubmission(
+    assignmentId: string,
+    studentId: string
+  ): Promise<AssignmentSubmission | null> {
+    try {
+      const response = await apiClient.get(
+        `${this.baseURL}/assignment/${assignmentId}/student/${studentId}/submission`
+      )
+      const data = response.data as { submission?: AssignmentSubmission } | null
+      return data?.submission || null
+    } catch (error: any) {
+      if (error.message?.includes("404")) {
+        return null
+      }
+      throw error
+    }
+  }
+
   async saveDraft(
     assignmentId: string,
     data: SaveDraftDto
@@ -207,6 +225,32 @@ export class AssignmentService {
 
   async deleteAssignmentDrafts(assignmentId: string): Promise<void> {
     await apiClient.delete(`${this.baseURL}/assignment/${assignmentId}/drafts`)
+  }
+
+  async gradeSubmission(
+    assignmentId: string,
+    submissionId: string,
+    grade: number,
+    feedback?: string
+  ): Promise<AssignmentSubmission> {
+    const response = await apiClient.patch(
+      `${this.baseURL}/assignment/${assignmentId}/submission/${submissionId}/grade`,
+      { grade, feedback }
+    )
+    const data = response.data as { submission: AssignmentSubmission }
+    return data.submission
+  }
+
+  async updateAssignmentDeadline(
+    assignmentId: string,
+    deadline: Date
+  ): Promise<Assignment> {
+    const response = await apiClient.patch(
+      `${this.baseURL}/assignment/${assignmentId}/deadline`,
+      { deadline: deadline.toISOString() }
+    )
+    const data = response.data as { assignment: Assignment }
+    return data.assignment
   }
 }
 
