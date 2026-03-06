@@ -42,8 +42,8 @@ export default function CodePage() {
   const studentId = searchParams.get('studentId') // For teachers viewing student code
   const { user } = useAuth()
   const { problem, loading: problemLoading, error: problemError } = useProblem(problemId)
-  const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading } = useCodeExecution()
-  const { submit: submitCode, submissionId, loading: submitLoading } = useCodeSubmission()
+  const { executeMultiple: runCodeMultiple, results: runResults, loading: runLoading, clearResult } = useCodeExecution()
+  const { submit: submitCode, submissionId, loading: submitLoading, clearSubmission } = useCodeSubmission()
   const { submission, poll: pollSubmission } = useSubmission(submissionId)
 
   const [activeTab, setActiveTab] = useState("code")
@@ -89,7 +89,7 @@ export default function CodePage() {
       if (viewSubmission && isAssignmentContext && problemId && assignmentId) {
         try {
           let submissionData
-          
+
           // If studentId is provided, teacher is viewing student's code
           if (studentId) {
             submissionData = await assignmentService.getStudentSubmission(assignmentId, studentId)
@@ -100,7 +100,7 @@ export default function CodePage() {
             // Student viewing their own submission
             submissionData = await assignmentService.getMySubmission(assignmentId)
           }
-          
+
           if (submissionData && submissionData.solutions[problemId]) {
             const solution = submissionData.solutions[problemId]
             setCode(solution.code)
@@ -109,7 +109,7 @@ export default function CodePage() {
             setLanguageId(langId)
             languageRef.current = langId
             setIsViewingSubmission(true)
-            
+
             if (studentId) {
               toast.success(`Viewing ${submissionData.student?.name || "student"}'s submission`)
             } else {
@@ -246,6 +246,9 @@ export default function CodePage() {
       return
     }
 
+    // Clear previous submission results to show fresh run results
+    clearSubmission()
+
     setActiveTab("testcases")
     toast.info(`Running your code against ${problem.examples.length} test case(s)...`)
 
@@ -260,7 +263,7 @@ export default function CodePage() {
       console.error("Run error:", error)
       toast.error("Failed to run code. Please try again.")
     }
-  }, [code, languageId, runCodeMultiple, setActiveTab, problem, problemId])
+  }, [code, languageId, runCodeMultiple, setActiveTab, problem, problemId, clearSubmission])
 
   const handleRunAllTestCases = useCallback(async () => {
     if (!code || code.trim() === '') {
@@ -289,6 +292,9 @@ export default function CodePage() {
       return
     }
 
+    // Clear previous submission results to show fresh run results
+    clearSubmission()
+
     setActiveTab("testcases")
     toast.info(`Running code against ${allTestCases.length} test case(s) (${teacherTestCases.testcases.length} visible + ${teacherTestCases.hiddenTestcases.length} hidden)...`)
 
@@ -299,7 +305,7 @@ export default function CodePage() {
       console.error("Run error:", error)
       toast.error("Failed to run code. Please try again.")
     }
-  }, [code, languageId, runCodeMultiple, setActiveTab, teacherTestCases, problemId])
+  }, [code, languageId, runCodeMultiple, setActiveTab, teacherTestCases, problemId, clearSubmission])
 
   const handleSubmit = useCallback(async () => {
     if (!user) {
@@ -541,7 +547,7 @@ export default function CodePage() {
                           <Plus className="h-3.5 w-3.5 mr-1.5" />
                           Add Test
                         </Button>
-                        
+
                         {/* Teacher viewing student submission - Run against all test cases */}
                         {studentId ? (
                           <Button
@@ -643,34 +649,34 @@ export default function CodePage() {
                     {(isViewingSubmission || viewOnly) && (
                       <div className={cn(
                         "border-b px-4 py-2 flex items-center justify-between",
-                        studentId 
-                          ? "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800" 
+                        studentId
+                          ? "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800"
                           : viewOnly
-                          ? "bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800"
-                          : "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800"
+                            ? "bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800"
+                            : "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800"
                       )}>
                         <div className="flex items-center gap-2">
                           <FileText className={cn(
                             "h-4 w-4",
-                            studentId 
-                              ? "text-purple-600 dark:text-purple-400" 
+                            studentId
+                              ? "text-purple-600 dark:text-purple-400"
                               : viewOnly
-                              ? "text-orange-600 dark:text-orange-400"
-                              : "text-blue-600 dark:text-blue-400"
+                                ? "text-orange-600 dark:text-orange-400"
+                                : "text-blue-600 dark:text-blue-400"
                           )} />
                           <span className={cn(
                             "text-sm font-medium",
-                            studentId 
-                              ? "text-purple-700 dark:text-purple-300" 
+                            studentId
+                              ? "text-purple-700 dark:text-purple-300"
                               : viewOnly
-                              ? "text-orange-700 dark:text-orange-300"
-                              : "text-blue-700 dark:text-blue-300"
+                                ? "text-orange-700 dark:text-orange-300"
+                                : "text-blue-700 dark:text-blue-300"
                           )}>
-                            {studentId 
-                              ? `Viewing ${viewingStudentName || "Student"}'s Submission` 
+                            {studentId
+                              ? `Viewing ${viewingStudentName || "Student"}'s Submission`
                               : viewOnly
-                              ? "Assignment Locked - View Only (Graded or Deadline Passed)"
-                              : "Viewing Your Submitted Solution"}
+                                ? "Assignment Locked - View Only (Graded or Deadline Passed)"
+                                : "Viewing Your Submitted Solution"}
                           </span>
                         </div>
                         {!studentId && (

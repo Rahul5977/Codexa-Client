@@ -30,7 +30,7 @@ interface TestCasesProps {
 }
 
 export function TestCases({ problem, loading, runResults, submission, isRunning, teacherTestCases }: TestCasesProps) {
-  
+
   const getStatusIcon = (status: TestCase['status']) => {
     switch (status) {
       case 'passed':
@@ -65,7 +65,7 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
 
   // Build test cases from problem or results
   const testCases: TestCase[] = []
-  
+
   // If teacher test cases are provided, use them instead of problem examples
   if (teacherTestCases) {
     teacherTestCases.testcases.forEach((tc, index) => {
@@ -97,7 +97,7 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
     })
   }
 
-  // Show run result
+  // Show run result - takes priority over submission
   if (runResults && runResults.length > 0) {
     console.log('Processing run results:', runResults)
     runResults.forEach((runResult, index) => {
@@ -105,30 +105,29 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
         const actualOut = (runResult.stdout || '').trim()
         const expectedOut = testCases[index].expectedOutput.trim()
         const isCorrect = actualOut === expectedOut
-        
+
         console.log(`Test case ${index + 1}:`, {
           actualOutput: actualOut,
           expectedOutput: expectedOut,
           isCorrect,
           status: runResult.status
         })
-        
+
         testCases[index] = {
           ...testCases[index],
           actualOutput: runResult.stdout || runResult.stderr || runResult.compile_output || 'No output',
-          status: runResult.stderr || runResult.compile_output ? 'error' : 
-                  isCorrect ? 'passed' : 'failed',
+          status: runResult.stderr || runResult.compile_output ? 'error' :
+            isCorrect ? 'passed' : 'failed',
           executionTime: runResult.time ? parseFloat(runResult.time) * 1000 : undefined
         }
       }
     })
   }
-
-  // Show submission result
-  if (submission && testCases.length > 0) {
+  // Show submission result only if no run results
+  else if (submission && testCases.length > 0) {
     const submissionStatus = submission.status
     let status: TestCase['status'] = 'pending'
-    
+
     if (submissionStatus === 'PENDING' || submissionStatus === 'PROCESSING') {
       status = 'running'
     } else if (submissionStatus === 'ACCEPTED') {
@@ -138,7 +137,7 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
     } else {
       status = 'error'
     }
-    
+
     testCases.forEach((tc, index) => {
       testCases[index] = {
         ...tc,
@@ -178,8 +177,8 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
                   <Badge className={cn(
                     "text-sm font-semibold px-3 py-1",
                     testCases.every(tc => tc.status === 'passed') ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                    testCases.some(tc => tc.status === 'error') ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
-                    "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      testCases.some(tc => tc.status === 'error') ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
+                        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                   )}>
                     {testCases.filter(tc => tc.status === 'passed').length} / {testCases.length} Passed
                   </Badge>
@@ -228,32 +227,32 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
 
                   <div className="space-y-3 text-sm">
                     <div>
-                      <div className="text-muted-foreground font-semibold mb-1.5 text-xs uppercase tracking-wide">Input:</div>
-                      <code className="text-xs bg-muted/50 p-2.5 rounded-lg block font-mono border border-border/30">
+                      <div className="text-muted-foreground font-semibold mb-1">Input:</div>
+                      <pre className="text-foreground bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words text-sm font-mono">
                         {testCase.input}
-                      </code>
+                      </pre>
                     </div>
 
                     <div>
-                      <div className="text-muted-foreground font-semibold mb-1.5 text-xs uppercase tracking-wide">Expected Output:</div>
-                      <code className="text-xs bg-muted/50 p-2.5 rounded-lg block font-mono border border-border/30">
+                      <div className="text-muted-foreground font-semibold mb-1">Expected Output:</div>
+                      <pre className="text-primary font-semibold bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words text-sm font-mono">
                         {testCase.expectedOutput}
-                      </code>
+                      </pre>
                     </div>
 
                     {testCase.actualOutput && (
                       <div>
-                        <div className="text-muted-foreground font-semibold mb-1.5 text-xs uppercase tracking-wide">Actual Output:</div>
-                        <code className={cn(
-                          "text-xs p-2.5 rounded-lg block font-mono border whitespace-pre-wrap",
+                        <div className="text-muted-foreground font-semibold mb-1">Actual Output:</div>
+                        <pre className={cn(
+                          "p-2 rounded border whitespace-pre-wrap break-words text-sm font-mono",
                           testCase.status === 'passed'
-                            ? "bg-green-50 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800/50"
+                            ? "bg-green-50 text-green-800 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800/50 font-semibold"
                             : testCase.status === 'error'
-                            ? "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800/50"
-                            : "bg-red-50 text-red-800 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/50"
+                              ? "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800/50"
+                              : "bg-red-50 text-red-800 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800/50"
                         )}>
                           {testCase.actualOutput}
-                        </code>
+                        </pre>
                       </div>
                     )}
                   </div>
