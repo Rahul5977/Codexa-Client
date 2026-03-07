@@ -94,7 +94,7 @@ export default function TakeExamPage() {
   } = useProctoring({
     examId,
     enabled: true,
-    maxViolations: 5,
+    maxViolations: 3,
     onMaxViolationsReached: () => {
       handleAutoSubmit()
     },
@@ -971,7 +971,7 @@ export default function TakeExamPage() {
                       Anti-Cheating Measures
                     </div>
                     <div className="text-xs text-yellow-700 dark:text-yellow-300">
-                      Tab switching and exiting fullscreen will be tracked. After 5 violations, your exam will be auto-submitted.
+                      Tab switching and exiting fullscreen will be tracked. After 3 violations, your exam will be auto-submitted.
                     </div>
                   </div>
                 </div>

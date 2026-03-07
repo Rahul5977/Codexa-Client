@@ -24,6 +24,7 @@ const AssignmentDetailPage = lazy(() => import('@/app/courses/[courseId]/assignm
 const ExamDetailPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/page'))
 const TakeExamPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/take/page'))
 const ExamSubmissionsPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/submissions/page'))
+const ViewExamSubmissionPage = lazy(() => import('@/app/courses/[courseId]/exams/[examId]/submissions/[submissionId]/page'))
 
 // Auth pages
 const SignIn = lazy(() => import('@/app/auth/sign-in/page'))
@@ -127,6 +128,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/courses/:courseId/exams/:examId/submissions",
     element: <ProtectedRoute><ExamSubmissionsPage /></ProtectedRoute>
+  },
+  {
+    path: "/courses/:courseId/exams/:examId/submissions/:submissionId",
+    element: <ProtectedRoute><ViewExamSubmissionPage /></ProtectedRoute>
   },
 
   // Content Pages

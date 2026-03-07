@@ -31,6 +31,20 @@ const LANGUAGE_ID_TO_STUB_KEY: Record<number, string> = {
   60: "go",
 }
 
+// Map Judge0 language IDs to language names
+const LANGUAGE_ID_TO_NAME: Record<number, string> = {
+  50: "c",
+  54: "cpp",
+  62: "java",
+  63: "javascript",
+  71: "python",
+  72: "ruby",
+  73: "rust",
+  74: "typescript",
+  78: "kotlin",
+  60: "go",
+}
+
 export default function CodePage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -132,7 +146,9 @@ export default function CodePage() {
             const solution = solutions[problemId]
             if (solution) {
               setCode(solution.code || "")
+              // Map languageId to language name for the code editor
               const langId = solution.languageId || 71
+              const languageName = LANGUAGE_ID_TO_NAME[langId] || "python"
               setLanguageId(langId)
               setIsViewingSubmission(true)
             }

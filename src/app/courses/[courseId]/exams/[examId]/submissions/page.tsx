@@ -102,13 +102,8 @@ export default function ExamSubmissionsPage() {
     return Math.round((solvedCount / totalProblems) * 100)
   }
 
-  const handleViewSubmission = (submission: ExamSubmission, problemIndex: number = 0) => {
-    const problemId = exam?.problems?.[problemIndex]?.problem.id
-    if (!problemId) return
-
-    navigate(
-      `/code?id=${problemId}&exam=${examId}&course=${courseId}&viewSubmission=true&studentId=${submission.studentId}`
-    )
+  const handleViewSubmission = (submission: ExamSubmission) => {
+    navigate(`/courses/${courseId}/exams/${examId}/submissions/${submission.id}`)
   }
 
   if (loading) {

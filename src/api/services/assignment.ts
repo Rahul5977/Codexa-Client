@@ -497,6 +497,17 @@ export class AssignmentService {
       updatedAt: new Date(submission.updatedAt),
     }))
   }
+
+  async updateExamGrade(
+    examId: string,
+    studentId: string,
+    gradeData: { grade?: number; feedback?: string }
+  ): Promise<void> {
+    await apiClient.put(
+      `${this.baseURL}/exam/${examId}/grade/${studentId}`,
+      gradeData
+    )
+  }
 }
 
 export const assignmentService = new AssignmentService()
