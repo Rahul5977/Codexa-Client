@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { CheckCircle2, Clock, TrendingUp, Building2, Code2, FileText, History, XCircle, Lightbulb } from "lucide-react"
+import { CheckCircle2, Clock, TrendingUp, Building2, Code2, FileText, History, Lightbulb } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type Problem } from "@/api/services/problem"
 import { Hints } from "./hints"
-import { useSubmissionHistory } from "@/hooks/api/use-submissions"
+import { SubmissionsPanel } from "./submissions-panel"
 import { useAuth } from "@/contexts/auth-context"
 
 interface ProblemStatementProps {
@@ -21,45 +21,12 @@ interface ProblemStatementProps {
   activeTab?: "description" | "submissions" | "hints"
   onTabChange?: (tab: "description" | "submissions" | "hints") => void
   onSubmissionClick?: (submissionId: string) => void
+  hideSubmissionsTab?: boolean
 }
 
-// Map SubmissionStatus from backend to display format
-const mapSubmissionStatus = (status: string): 'Accepted' | 'Wrong Answer' | 'Time Limit Exceeded' | 'Runtime Error' | 'Compilation Error' => {
-  switch (status) {
-    case 'ACCEPTED':
-      return 'Accepted'
-    case 'WRONG_ANSWER':
-      return 'Wrong Answer'
-    case 'TIME_LIMIT_EXCEEDED':
-      return 'Time Limit Exceeded'
-    case 'COMPILATION_ERROR':
-      return 'Compilation Error'
-    case 'ERROR':
-    case 'MEMORY_LIMIT_EXCEEDED':
-      return 'Runtime Error'
-    default:
-      return 'Runtime Error'
-  }
-}
-
-const formatTimeAgo = (date: string | Date) => {
-  const now = new Date()
-  const submittedAt = new Date(date)
-  const diffMs = now.getTime() - submittedAt.getTime()
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-
-  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-  if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-  return 'Just now'
-}
-
-export function ProblemStatement({ problem, loading, error, activeTab: externalActiveTab, onTabChange, onSubmissionClick }: ProblemStatementProps) {
+export function ProblemStatement({ problem, loading, error, activeTab: externalActiveTab, onTabChange, onSubmissionClick, hideSubmissionsTab = false }: ProblemStatementProps) {
   const [internalActiveTab, setInternalActiveTab] = useState("description")
   const { user } = useAuth()
-  const { submissions, loading: submissionsLoading, fetch: fetchSubmissions } = useSubmissionHistory(user?.id, problem?.id)
 
   // Use external tab if provided, otherwise use internal
   const activeTab = externalActiveTab || internalActiveTab
@@ -71,13 +38,6 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
       setInternalActiveTab(tab)
     }
   }
-
-  // Fetch submissions when tab changes to submissions
-  useEffect(() => {
-    if (activeTab === 'submissions' && user && problem?.id) {
-      fetchSubmissions()
-    }
-  }, [activeTab, user, problem?.id, fetchSubmissions])
 
   if (loading) {
     return (
@@ -146,36 +106,6 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
     }
   }
 
-  const getSubmissionStatusColor = (status: 'Accepted' | 'Wrong Answer' | 'Time Limit Exceeded' | 'Runtime Error' | 'Compilation Error') => {
-    switch (status) {
-      case 'Accepted':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-      case 'Wrong Answer':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-      case 'Time Limit Exceeded':
-        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-      case 'Compilation Error':
-        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-      case 'Runtime Error':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-    }
-  }
-
-  const getSubmissionStatusIcon = (status: 'Accepted' | 'Wrong Answer' | 'Time Limit Exceeded' | 'Runtime Error' | 'Compilation Error') => {
-    switch (status) {
-      case 'Accepted':
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />
-      case 'Wrong Answer':
-        return <XCircle className="h-4 w-4 text-red-500" />
-      case 'Time Limit Exceeded':
-        return <Clock className="h-4 w-4 text-orange-500" />
-      case 'Compilation Error':
-        return <Code2 className="h-4 w-4 text-purple-500" />
-      case 'Runtime Error':
-        return <Code2 className="h-4 w-4 text-yellow-500" />
-    }
-  }
-
   return (
     <div className="h-full flex flex-col">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
@@ -189,10 +119,12 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
               <Lightbulb className="h-4 w-4" />
               <span className="font-medium">Hints</span>
             </TabsTrigger>
-            <TabsTrigger value="submissions" className="gap-2">
-              <History className="h-4 w-4" />
-              <span className="font-medium">Submissions</span>
-            </TabsTrigger>
+            {!hideSubmissionsTab && (
+              <TabsTrigger value="submissions" className="gap-2">
+                <History className="h-4 w-4" />
+                <span className="font-medium">Submissions</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -305,78 +237,15 @@ export function ProblemStatement({ problem, loading, error, activeTab: externalA
           <Hints problem={problem} />
         </TabsContent>
 
-        <TabsContent value="submissions" className="flex-1 m-0 overflow-y-auto">
-          <ScrollArea className="h-full">
-            <div className="p-3">
-              {submissionsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-24 w-full" />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {submissions && submissions.length > 0 ? (
-                    submissions.map((submission) => {
-                      const displayStatus = mapSubmissionStatus(submission.status)
-                      const runtime = submission.time ? `${parseFloat(submission.time) * 1000}ms` : 'N/A'
-                      const memory = submission.memory ? `${(submission.memory / 1024).toFixed(1)}MB` : 'N/A'
-                      const timestamp = formatTimeAgo(submission.createdAt)
-
-                      return (
-                        <Card
-                          key={submission.id}
-                          className="p-4 border-border/50 hover:shadow-md transition-all cursor-pointer hover:border-primary/30 bg-linear-to-br from-muted/10 to-background"
-                          onClick={() => onSubmissionClick?.(submission.id)}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex flex-col items-start gap-2 flex-1">
-                              <div className="flex items-center gap-2">
-                                {getSubmissionStatusIcon(displayStatus)}
-                                <Badge className={cn("text-xs font-semibold", getSubmissionStatusColor(displayStatus))}>
-                                  {displayStatus}
-                                </Badge>
-                              </div>
-
-                              <div className="flex items-center gap-6 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Runtime:</span>
-                                  <span className="ml-2 font-medium">{runtime}</span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Memory:</span>
-                                  <span className="ml-2 font-medium">{memory}</span>
-                                </div>
-                                {submission.language && (
-                                  <div>
-                                    <span className="text-muted-foreground">Language:</span>
-                                    <span className="ml-2 font-medium capitalize">{submission.language}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="text-sm text-muted-foreground">
-                              {timestamp}
-                            </div>
-                          </div>
-                        </Card>
-                      )
-                    })
-                  ) : (
-                    <div className="text-center py-12">
-                      <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Submissions Yet</h3>
-                      <p className="text-muted-foreground">
-                        Start coding to see your submission history here.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </TabsContent>
+        {!hideSubmissionsTab && (
+          <TabsContent value="submissions" className="flex-1 m-0 h-full">
+            <SubmissionsPanel 
+              problemId={problem.id}
+              currentUserId={user?.id}
+              onSubmissionClick={onSubmissionClick}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   )

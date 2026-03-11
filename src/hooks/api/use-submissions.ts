@@ -204,7 +204,13 @@ export function useSubmission(id: string | null) {
   }
 }
 
-export function useSubmissionHistory(userId?: string, problemId?: string) {
+export function useSubmissionHistory(
+  userId?: string, 
+  problemId?: string,
+  status?: 'ACCEPTED' | 'PENDING' | 'PROCESSING' | 'WRONG_ANSWER' | 'ERROR' | 'TIME_LIMIT_EXCEEDED' | 'MEMORY_LIMIT_EXCEEDED' | 'COMPILATION_ERROR',
+  languageIds?: number[],
+  includeUser?: boolean
+) {
   const [submissions, setSubmissions] = useState<SubmissionResult[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -213,7 +219,7 @@ export function useSubmissionHistory(userId?: string, problemId?: string) {
     setLoading(true)
     setError(null)
     try {
-      const data = await getSubmissions(userId, problemId)
+      const data = await getSubmissions(userId, problemId, status, languageIds, includeUser)
       setSubmissions(Array.isArray(data) ? data : [])
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err.message || 'Failed to fetch submissions'
@@ -223,7 +229,7 @@ export function useSubmissionHistory(userId?: string, problemId?: string) {
     } finally {
       setLoading(false)
     }
-  }, [userId, problemId])
+  }, [userId, problemId, status, languageIds, includeUser])
 
   return {
     submissions,

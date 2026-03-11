@@ -24,6 +24,11 @@ export interface Submission {
   memory?: number
   createdAt: string
   updatedAt: string
+  user?: {
+    id: string
+    name: string
+    email: string
+  }
 }
 
 export interface CreateSubmissionInput {
@@ -60,6 +65,12 @@ export interface SubmissionResult {
   languageId: number
   language?: string
   code?: string
+  userId?: string
+  user?: {
+    id: string
+    name: string
+    email: string
+  }
 }
 
 /**
@@ -100,11 +111,20 @@ export const getSubmissionById = async (id: string): Promise<{ message: string; 
 /**
  * Get all submissions for a user/problem
  */
-export const getSubmissions = async (userId?: string, problemId?: string): Promise<SubmissionResult[]> => {
+export const getSubmissions = async (
+  userId?: string, 
+  problemId?: string, 
+  status?: SubmissionStatus,
+  languageIds?: number[],
+  includeUser?: boolean
+): Promise<SubmissionResult[]> => {
   const codeServiceUrl = import.meta.env.VITE_CODE_SERVICE_URL || 'http://localhost:3004'
   const params = new URLSearchParams()
   if (userId) params.append('userId', userId)
   if (problemId) params.append('problemId', problemId)
+  if (status) params.append('status', status)
+  if (languageIds && languageIds.length > 0) params.append('languageIds', languageIds.join(','))
+  if (includeUser) params.append('includeUser', 'true')
   
   const response = await apiClient.get<SubmissionResult[]>(
     `${codeServiceUrl}/submissions?${params.toString()}`
