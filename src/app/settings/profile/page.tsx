@@ -24,6 +24,7 @@ import { Logo } from "@/components/logo"
 import { authService } from "@/api/services/auth"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
+import { UserStatsCard } from "@/components/user-stats-card"
 
 const profileFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -179,7 +180,11 @@ export default function ProfileSettingsPage() {
 
   return (
     <BaseLayout title="Profile Settings" description="Manage your profile information">
-      <div className="px-4 lg:px-6">
+      <div className="px-4 lg:px-6 space-y-6">
+        {/* User Statistics */}
+        {user?.id && <UserStatsCard userId={user.id} />}
+
+        {/* Profile Settings Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <Card>
