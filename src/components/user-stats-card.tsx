@@ -26,7 +26,26 @@ export function UserStatsCard({ userId }: UserStatsCardProps) {
         setAnalytics(data)
       } catch (error: any) {
         console.error("Failed to fetch analytics:", error)
-        // Don't show error toast - just fail silently for better UX
+        // Set default empty analytics on error
+        setAnalytics({
+          overview: {
+            totalSolved: 0,
+            totalAttempted: 0,
+            successRate: 0,
+            easySolved: 0,
+            mediumSolved: 0,
+            hardSolved: 0,
+          },
+          streaks: {
+            current: 0,
+            max: 0,
+            lastActive: null,
+          },
+          activityHeatmap: {},
+          topicStrengths: [],
+          efficiencyStats: {},
+          languageStats: {},
+        })
       } finally {
         setLoading(false)
       }
@@ -54,21 +73,23 @@ export function UserStatsCard({ userId }: UserStatsCardProps) {
     )
   }
 
-  if (!analytics) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center text-muted-foreground">
-            <Target className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>No statistics available yet.</p>
-            <p className="text-sm mt-1">Start solving problems to see your progress!</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
+  // Always show stats, even if they're all 0
+  const { overview, streaks, globalRank } = analytics || {
+    overview: {
+      totalSolved: 0,
+      totalAttempted: 0,
+      successRate: 0,
+      easySolved: 0,
+      mediumSolved: 0,
+      hardSolved: 0,
+    },
+    streaks: {
+      current: 0,
+      max: 0,
+      lastActive: null,
+    },
+    globalRank: null,
   }
-
-  const { overview, streaks, globalRank } = analytics
 
   return (
     <>
@@ -182,7 +203,7 @@ export function UserStatsCard({ userId }: UserStatsCardProps) {
       </Card>
 
       {/* Language Stats */}
-      {analytics.languageStats && Object.keys(analytics.languageStats).length > 0 && (
+      {analytics?.languageStats && Object.keys(analytics.languageStats).length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">

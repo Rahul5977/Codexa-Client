@@ -38,6 +38,12 @@ export interface UserAnalytics {
     percentile: number
     totalUsers: number
   }
+  problemStats?: {
+    total: number
+    easy: number
+    medium: number
+    hard: number
+  }
 }
 
 export interface ActivityHeatmap {
@@ -45,8 +51,9 @@ export interface ActivityHeatmap {
   streak: {
     current: number
     max: number
+    lastActive?: Date | null
   }
-  stats: {
+  summary: {
     totalActiveDays: number
     maxInDay: number
     totalSubmissions: number

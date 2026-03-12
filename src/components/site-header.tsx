@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { CommandSearch, SearchTrigger } from "@/components/command-search"
 import { ModeToggle } from "@/components/mode-toggle"
+import { StreakIndicator } from "@/components/streak-indicator"
 import { getAppUrl } from "@/lib/utils"
 
 export function SiteHeader() {
@@ -36,6 +37,7 @@ export function SiteHeader() {
             <SearchTrigger onClick={() => setSearchOpen(true)} />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <StreakIndicator />
             <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
               <a
                 href={getAppUrl("/landing")}
