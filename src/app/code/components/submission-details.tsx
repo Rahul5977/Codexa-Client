@@ -11,6 +11,7 @@ import { CheckCircle2, XCircle, Clock, Code2, Copy, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type SubmissionResult, getSubmissionById } from "@/api/services/submission"
 import { toast } from "sonner"
+import { AIAnalysisReport } from "./ai-analysis-report"
 
 interface SubmissionDetailsProps {
   submissionId: string | null
@@ -251,6 +252,14 @@ export function SubmissionDetails({ submissionId }: SubmissionDetailsProps) {
         <div className="text-xs text-muted-foreground pt-4 border-t border-border/50">
           Submitted {formatTimeAgo(submission.createdAt)}
         </div>
+
+        <Separator />
+
+        {/* AI Analysis Report */}
+        <AIAnalysisReport
+          submissionId={submission.id}
+          submissionStatus={submission.status}
+        />
       </div>
     </ScrollArea>
   )
