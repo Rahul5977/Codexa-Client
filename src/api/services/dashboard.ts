@@ -26,21 +26,44 @@ class DashboardService {
       return MockDashboardService.getDashboardStats()
     }
 
-    // Since there's no dedicated dashboard stats endpoint, we'll aggregate from available data
+    // Aggregate from real user submissions + problems
     try {
       const user = await authService.me()
+      const [allProblems, submissions] = await Promise.all([
+        getAllProblems(),
+        getSubmissions(user.id),
+      ])
 
-      // Create stats from user data
+      const attemptedProblemIds = new Set(
+        submissions
+          .map((submission) => submission.problemId)
+          .filter((problemId): problemId is string => Boolean(problemId))
+      )
+
+      const solvedProblemIds = new Set(
+        submissions
+          .filter((submission) => submission.status === 'ACCEPTED')
+          .map((submission) => submission.problemId)
+          .filter((problemId): problemId is string => Boolean(problemId))
+      )
+
+      const solvedProblems = solvedProblemIds.size
+      const attemptedProblems = attemptedProblemIds.size
+      const totalProblems = Array.isArray(allProblems) ? allProblems.length : 0
+
       const stats = {
-        solvedProblems: user.totalSolved || 0,
-        totalProblems: user.totalSolved + 50, // Placeholder - need to get actual total from problems API
-        attemptedProblems: user.totalSolved + 10, // Placeholder
-        acceptanceRate: user.totalSolved > 0 ? 75 : 0, // Placeholder
-        currentStreak: 0, // Not available in current backend
-        longestStreak: 0, // Not available in current backend
+        solvedProblems,
+        totalProblems,
+        attemptedProblems,
+        acceptanceRate:
+          attemptedProblems > 0
+            ? Math.round((solvedProblems / attemptedProblems) * 100)
+            : 0,
+        currentStreak: 0,
+        longestStreak: 0,
         contestRating: user.currentRating || 0,
-        rankPosition: 1000, // Placeholder - not available
-        aiAnalysisScore: 75, // Placeholder - not available
+        rankPosition: 0,
+        aiAnalysisScore: 0,
       }
 
       return {
@@ -90,6 +113,30 @@ class DashboardService {
         throw new Error("Invalid response format: expected array of problems")
       }
 
+      // Pull user submissions so each problem gets real solved/attempted/unsolved status
+      let submissions = [] as Awaited<ReturnType<typeof getSubmissions>>
+      try {
+        const user = await authService.me()
+        submissions = await getSubmissions(user.id)
+      } catch {
+        submissions = []
+      }
+
+      const problemStatusMap = new Map<string, 'solved' | 'attempted'>()
+      for (const submission of submissions) {
+        const problemId = submission.problemId
+        if (!problemId) continue
+
+        if (submission.status === 'ACCEPTED') {
+          problemStatusMap.set(problemId, 'solved')
+          continue
+        }
+
+        if (!problemStatusMap.has(problemId)) {
+          problemStatusMap.set(problemId, 'attempted')
+        }
+      }
+
       // Transform backend problem format to dashboard problem format
       const difficultyMap: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
         'EASY': 'Easy',
@@ -103,7 +150,7 @@ class DashboardService {
         difficulty: difficultyMap[p.difficulty] || 'Medium',
         category: p.tags[0] || 'General',
         tags: p.tags || [],
-        status: 'unsolved' as const, // TODO: Get actual status from submissions
+        status: problemStatusMap.get(p.id) || 'unsolved',
         acceptance: '50%', // Placeholder
         createdAt: p.createdAt,
         updatedAt: p.updatedAt
@@ -261,6 +308,20 @@ class DashboardService {
 
     try {
       const problem = await getProblem(id.toString())
+      let status: 'solved' | 'attempted' | 'unsolved' = 'unsolved'
+
+      try {
+        const user = await authService.me()
+        const submissions = await getSubmissions(user.id, problem.id)
+
+        if (submissions.some((submission) => submission.status === 'ACCEPTED')) {
+          status = 'solved'
+        } else if (submissions.length > 0) {
+          status = 'attempted'
+        }
+      } catch {
+        status = 'unsolved'
+      }
       
       const difficultyMap: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
         'EASY': 'Easy',
@@ -276,7 +337,7 @@ class DashboardService {
           difficulty: difficultyMap[problem.difficulty] || 'Medium',
           category: problem.tags[0] || "General",
           tags: problem.tags,
-          status: "unsolved" as const,
+          status,
           acceptance: '50%',
           createdAt: problem.createdAt,
           updatedAt: problem.updatedAt

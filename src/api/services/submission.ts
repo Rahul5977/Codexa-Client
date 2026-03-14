@@ -1,5 +1,19 @@
 import { apiClient } from '../client'
 
+const rawCodeServiceUrl =
+  import.meta.env.VITE_CODE_SERVICE_URL || 'http://localhost:8003/api'
+
+const CODE_SERVICE_URL = rawCodeServiceUrl.endsWith('/api')
+  ? rawCodeServiceUrl
+  : `${rawCodeServiceUrl.replace(/\/$/, '')}/api`
+
+const unwrapData = <T>(response: any): T => {
+  if (response && typeof response === 'object' && 'data' in response) {
+    return response.data as T
+  }
+  return response as T
+}
+
 // Types for submissions
 export type SubmissionStatus = 
   | 'PENDING'
@@ -56,6 +70,7 @@ export interface RunCodeResult {
 
 export interface SubmissionResult {
   id: string
+  problemId?: string
   status: SubmissionStatus
   stdout?: string
   stderr?: string
@@ -77,35 +92,32 @@ export interface SubmissionResult {
  * Run code (dry run without submission)
  */
 export const runCode = async (data: RunCodeInput): Promise<RunCodeResult> => {
-  const codeServiceUrl = import.meta.env.VITE_CODE_SERVICE_URL || 'http://localhost:3004'
   const response = await apiClient.post<RunCodeResult>(
-    `${codeServiceUrl}/submissions/run`,
+    `${CODE_SERVICE_URL}/submissions/run`,
     data
   )
-  return response
+  return unwrapData<RunCodeResult>(response)
 }
 
 /**
  * Submit code for evaluation
  */
 export const submitCode = async (data: CreateSubmissionInput): Promise<{ message: string; submissionId: string }> => {
-  const codeServiceUrl = import.meta.env.VITE_CODE_SERVICE_URL || 'http://localhost:3004'
   const response = await apiClient.post<{ message: string; submissionId: string }>(
-    `${codeServiceUrl}/submissions`,
+    `${CODE_SERVICE_URL}/submissions`,
     data
   )
-  return response
+  return unwrapData<{ message: string; submissionId: string }>(response)
 }
 
 /**
  * Get submission by ID (for polling)
  */
 export const getSubmissionById = async (id: string): Promise<{ message: string; submission: SubmissionResult }> => {
-  const codeServiceUrl = import.meta.env.VITE_CODE_SERVICE_URL || 'http://localhost:3004'
   const response = await apiClient.get<{ message: string; submission: SubmissionResult }>(
-    `${codeServiceUrl}/submissions/${id}`
+    `${CODE_SERVICE_URL}/submissions/${id}`
   )
-  return response
+  return unwrapData<{ message: string; submission: SubmissionResult }>(response)
 }
 
 /**
@@ -118,7 +130,6 @@ export const getSubmissions = async (
   languageIds?: number[],
   includeUser?: boolean
 ): Promise<SubmissionResult[]> => {
-  const codeServiceUrl = import.meta.env.VITE_CODE_SERVICE_URL || 'http://localhost:3004'
   const params = new URLSearchParams()
   if (userId) params.append('userId', userId)
   if (problemId) params.append('problemId', problemId)
@@ -127,7 +138,7 @@ export const getSubmissions = async (
   if (includeUser) params.append('includeUser', 'true')
   
   const response = await apiClient.get<SubmissionResult[]>(
-    `${codeServiceUrl}/submissions?${params.toString()}`
+    `${CODE_SERVICE_URL}/submissions?${params.toString()}`
   )
-  return response
+  return unwrapData<SubmissionResult[]>(response)
 }

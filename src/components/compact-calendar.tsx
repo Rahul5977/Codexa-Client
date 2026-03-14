@@ -87,10 +87,6 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
       return cn(baseClass, "invisible")
     }
     
-    if (isToday) {
-      return cn(baseClass, "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2")
-    }
-    
     if (activity.type === 'future') {
       return cn(baseClass, "bg-muted/30 text-muted-foreground border border-dashed")
     }
@@ -100,6 +96,10 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
       if (activity.count >= 3) return cn(baseClass, "bg-green-500/80 text-white hover:bg-green-500")
       if (activity.count === 2) return cn(baseClass, "bg-green-500/60 text-white hover:bg-green-500")
       return cn(baseClass, "bg-green-500/40 text-white hover:bg-green-500")
+    }
+    
+    if (isToday) {
+      return cn(baseClass, "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2")
     }
     
     // Inactive (past day with no activity)

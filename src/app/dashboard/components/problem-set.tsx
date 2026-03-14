@@ -140,12 +140,12 @@ export function ProblemSet() {
       </CardHeader>
       <CardContent>
         {/* Filters */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-          <div className="relative">
+        
+          <div className="relative mb-4">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search problems..."
-              className="pl-8 w-full md:w-80"
+              className="pl-8 w-full"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value)
@@ -153,7 +153,7 @@ export function ProblemSet() {
               }}
             />
           </div>
-          
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Select value={selectedCategory} onValueChange={(value) => {
               setSelectedCategory(value)
@@ -208,7 +208,6 @@ export function ProblemSet() {
                 <TableHead className="w-16">#</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="w-24">Difficulty</TableHead>
-                <TableHead className="w-24">Acceptance</TableHead>
                 <TableHead className="w-24">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -221,7 +220,7 @@ export function ProblemSet() {
                   <TableCell className="font-medium">{problem.id}</TableCell>
                   <TableCell>
                     <button 
-                      className="text-left hover:text-primary transition-colors font-medium"
+                      className="text-left text-primary transition-colors font-medium"
                       onClick={() => handleProblemClick(problem.id)}
                     >
                       {problem.title}
@@ -232,7 +231,6 @@ export function ProblemSet() {
                       {problem.difficulty}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{problem.acceptance}</TableCell>
                   <TableCell>
                     <Button 
                       size="sm" 

@@ -6,16 +6,18 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Clock, Code, CheckCircle2, XCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getSubmissions, type SubmissionResult } from "@/api/services/submission"
+import { getAllProblems } from "@/api/services/problem"
 
 interface Submission {
   id: string
   problemTitle: string
   problemId: string
   language: string
-  status: "ACCEPTED" | "REJECTED" | "PENDING"
+  status: string
   time: number
   memory: number
-  submittedAt: Date
+  submittedAt: string
 }
 
 interface RecentSubmissionsProps {
@@ -28,14 +30,32 @@ export function RecentSubmissions({ userId, limit = 10 }: RecentSubmissionsProps
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Fetch submissions from API
-    // For now, using mock data
     const fetchSubmissions = async () => {
       try {
         setLoading(true)
-        // Mock data
-        const mockData: Submission[] = []
-        setSubmissions(mockData)
+        const [submissionList, allProblems] = await Promise.all([
+          getSubmissions(userId),
+          getAllProblems().catch(() => []),
+        ])
+
+        const problemTitleById = new Map(
+          (allProblems || []).map((problem) => [problem.id, problem.title])
+        )
+
+        const mapped = submissionList.slice(0, limit).map((submission: SubmissionResult) => ({
+          id: submission.id,
+          problemId: submission.problemId || "",
+          problemTitle:
+            (submission.problemId && problemTitleById.get(submission.problemId)) ||
+            "Problem",
+          language: submission.language || "Unknown",
+          status: submission.status,
+          time: submission.time ? Math.round(parseFloat(submission.time) * 1000) : 0,
+          memory: submission.memory || 0,
+          submittedAt: submission.createdAt,
+        }))
+
+        setSubmissions(mapped)
       } catch (error) {
         console.error("Failed to fetch submissions:", error)
         setSubmissions([])
@@ -51,7 +71,11 @@ export function RecentSubmissions({ userId, limit = 10 }: RecentSubmissionsProps
     switch (status) {
       case "ACCEPTED":
         return <CheckCircle2 className="h-5 w-5 text-green-500" />
-      case "REJECTED":
+      case "WRONG_ANSWER":
+      case "ERROR":
+      case "TIME_LIMIT_EXCEEDED":
+      case "MEMORY_LIMIT_EXCEEDED":
+      case "COMPILATION_ERROR":
         return <XCircle className="h-5 w-5 text-red-500" />
       default:
         return <Clock className="h-5 w-5 text-yellow-500" />
@@ -62,8 +86,18 @@ export function RecentSubmissions({ userId, limit = 10 }: RecentSubmissionsProps
     switch (status) {
       case "ACCEPTED":
         return <Badge className="bg-green-500 hover:bg-green-600">Accepted</Badge>
-      case "REJECTED":
-        return <Badge variant="destructive">Rejected</Badge>
+      case "WRONG_ANSWER":
+        return <Badge variant="destructive">Wrong Answer</Badge>
+      case "TIME_LIMIT_EXCEEDED":
+        return <Badge variant="destructive">Time Limit Exceeded</Badge>
+      case "MEMORY_LIMIT_EXCEEDED":
+        return <Badge variant="destructive">Memory Limit Exceeded</Badge>
+      case "COMPILATION_ERROR":
+        return <Badge variant="destructive">Compilation Error</Badge>
+      case "ERROR":
+        return <Badge variant="destructive">Runtime Error</Badge>
+      case "PROCESSING":
+        return <Badge variant="outline">Processing</Badge>
       default:
         return <Badge variant="outline">Pending</Badge>
     }
