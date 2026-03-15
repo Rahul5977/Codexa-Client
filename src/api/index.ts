@@ -14,11 +14,6 @@ export * from './services/auth'
 export * from './services/problem'
 export * from './services/submission'
 
-// Hooks
-export * from '../hooks/api/use-dashboard'
-export * from '../hooks/api/use-problems'
-export * from '../hooks/api/use-submissions'
-
 // Mock data (useful for testing)
 export { MockDashboardService } from './mock/dashboard-service'
 export * from './mock/dashboard-data'

@@ -52,7 +52,7 @@ class ApiClient {
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
+        await response.json().catch(() => ({}))
         
         // Only clear auth if refresh token is invalid (401/403)
         if (response.status === 401 || response.status === 403) {
