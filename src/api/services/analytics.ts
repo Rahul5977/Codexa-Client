@@ -84,7 +84,7 @@ export interface EfficiencyMetrics {
 export const getUserAnalytics = async (userId: string): Promise<UserAnalytics> => {
   const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
   const response = await apiClient.get<{ success: boolean; data: UserAnalytics }>(
-    `${analyticsServiceUrl}/api/analytics/dashboard/${userId}`
+    `${analyticsServiceUrl}/dashboard/${userId}`
   )
   return response.data.data
 }
@@ -95,7 +95,7 @@ export const getUserAnalytics = async (userId: string): Promise<UserAnalytics> =
 export const getActivityHeatmap = async (userId: string): Promise<ActivityHeatmap> => {
   const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
   const response = await apiClient.get<{ success: boolean; data: ActivityHeatmap }>(
-    `${analyticsServiceUrl}/api/analytics/heatmap/${userId}`
+    `${analyticsServiceUrl}/heatmap/${userId}`
   )
   return response.data.data
 }
@@ -106,7 +106,7 @@ export const getActivityHeatmap = async (userId: string): Promise<ActivityHeatma
 export const getTopicStrengths = async (userId: string): Promise<TopicStrength[]> => {
   const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
   const response = await apiClient.get<{ success: boolean; data: TopicStrength[] }>(
-    `${analyticsServiceUrl}/api/analytics/topics/${userId}`
+    `${analyticsServiceUrl}/topics/${userId}`
   )
   return response.data.data
 }
@@ -121,7 +121,7 @@ export const getEfficiencyMetrics = async (
   const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
   const params = language ? `?language=${language}` : ''
   const response = await apiClient.get<{ success: boolean; data: EfficiencyMetrics }>(
-    `${analyticsServiceUrl}/api/analytics/efficiency/${userId}${params}`
+    `${analyticsServiceUrl}/efficiency/${userId}${params}`
   )
   return response.data.data
 }
@@ -142,6 +142,6 @@ export const getUserRank = async (userId: string): Promise<{
       percentile: number
       totalUsers: number
     }
-  }>(`${analyticsServiceUrl}/api/analytics/rank/${userId}`)
+  }>(`${analyticsServiceUrl}/rank/${userId}`)
   return response.data.data
 }
