@@ -15,6 +15,15 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
   const [heatmap, setHeatmap] = useState<ActivityHeatmap | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const formatLocalDateKey = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const formatUTCDateKey = (date: Date) => date.toISOString().split('T')[0]
+
   useEffect(() => {
     const fetchHeatmap = async () => {
       if (!userId) return
@@ -38,23 +47,22 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
     fetchHeatmap()
   }, [userId])
 
-  // Generate last 365 days grouped by weeks
-  const generateYearGrid = () => {
+  // Generate current calendar year grid (Jan -> Dec), grouped by weeks
+  const generateYearGrid = (year: number) => {
     const weeks: Date[][] = []
-    const today = new Date()
-    const startDate = new Date(today)
-    startDate.setDate(startDate.getDate() - 364) // Go back 364 days (365 days total including today)
-    
-    // Find the Sunday before start date to align weeks properly
-    const dayOfWeek = startDate.getDay()
-    startDate.setDate(startDate.getDate() - dayOfWeek)
-    
+    const yearStart = new Date(year, 0, 1)
+    const yearEnd = new Date(year, 11, 31)
+
+    // Align to full week boundaries so rows remain Sun-Sat
+    const startDate = new Date(yearStart)
+    startDate.setDate(startDate.getDate() - startDate.getDay())
+
+    const endDate = new Date(yearEnd)
+    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()))
+
     let currentWeek: Date[] = []
-    const endDate = new Date(today)
-    endDate.setDate(endDate.getDate() + 1) // Include today
-    
     const currentDate = new Date(startDate)
-    while (currentDate < endDate) {
+    while (currentDate <= endDate) {
       currentWeek.push(new Date(currentDate))
       
       if (currentWeek.length === 7) {
@@ -65,17 +73,13 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
       currentDate.setDate(currentDate.getDate() + 1)
     }
     
-    // Add remaining days if any
-    if (currentWeek.length > 0) {
-      weeks.push(currentWeek)
-    }
-    
     return weeks
   }
 
   const getDayActivity = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
-    const count = heatmap?.heatmap[dateStr] || 0
+    const utcKey = formatUTCDateKey(date)
+    const localKey = formatLocalDateKey(date)
+    const count = heatmap?.heatmap[utcKey] ?? heatmap?.heatmap[localKey] ?? 0
     return count
   }
 
@@ -87,29 +91,23 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
     return 'bg-green-500/90 hover:bg-green-500'
   }
 
-  // Get month labels for the grid
-  const getMonthLabels = (weeks: Date[][]) => {
+  // Get fixed Jan-Dec labels with week-column index
+  const getMonthLabels = (weeks: Date[][], year: number) => {
     const labels: { month: string; weekIndex: number }[] = []
-    let lastMonth = -1
-    
-    weeks.forEach((week, idx) => {
-      const firstDay = week[0]
-      const month = firstDay.getMonth()
-      
-      if (month !== lastMonth && idx > 0) {
+
+    for (let month = 0; month < 12; month++) {
+      const firstDate = new Date(year, month, 1)
+      const weekIndex = weeks.findIndex(
+        (week) => week.some((day) => day.toDateString() === firstDate.toDateString())
+      )
+
+      if (weekIndex >= 0) {
         labels.push({
-          month: firstDay.toLocaleDateString('en-US', { month: 'short' }),
-          weekIndex: idx
+          month: firstDate.toLocaleDateString('en-US', { month: 'short' }),
+          weekIndex,
         })
-        lastMonth = month
-      } else if (idx === 0) {
-        labels.push({
-          month: firstDay.toLocaleDateString('en-US', { month: 'short' }),
-          weekIndex: idx
-        })
-        lastMonth = month
       }
-    })
+    }
     
     return labels
   }
@@ -120,9 +118,9 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Annual Activity Heatmap
+            Yearly Activity Heatmap
           </CardTitle>
-          <CardDescription>Your problem-solving activity over the past year</CardDescription>
+          <CardDescription>Your problem-solving activity from Jan to Dec</CardDescription>
         </CardHeader>
         <CardContent>
           <Skeleton className="h-40 w-full" />
@@ -131,9 +129,10 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
     )
   }
 
-  const weeks = generateYearGrid()
-  const monthLabels = getMonthLabels(weeks)
-  const today = new Date().toISOString().split('T')[0]
+  const currentYear = new Date().getFullYear()
+  const weeks = generateYearGrid(currentYear)
+  const monthLabels = getMonthLabels(weeks, currentYear)
+  const today = formatLocalDateKey(new Date())
 
   return (
     <Card className="w-full">
@@ -142,9 +141,9 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
           <div>
             <CardTitle className="text-lg flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Annual Activity Heatmap
+              Yearly Activity Heatmap
             </CardTitle>
-            <CardDescription>Your problem-solving activity over the past year</CardDescription>
+            <CardDescription>{`Your ${currentYear} activity from Jan to Dec`}</CardDescription>
           </div>
           {heatmap && (
             <div className="flex items-center gap-4 text-sm">
@@ -161,19 +160,19 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {/* GitHub-style contribution graph */}
-          <div className="w-full overflow-hidden">
+          {/* Full-width yearly contribution grid */}
+          <div className="w-full">
             <div className="w-full">
               {/* Month labels */}
-              <div className="flex mb-1 ml-7">
+              <div
+                className="mb-1 ml-9 grid gap-1"
+                style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+              >
                 {monthLabels.map((label, idx) => (
                   <div
                     key={idx}
-                    className="text-xs text-muted-foreground flex-shrink-0"
-                    style={{ 
-                      marginLeft: idx === 0 ? '0' : `${(label.weekIndex - (monthLabels[idx - 1]?.weekIndex || 0)) * 11}px`,
-                      minWidth: '30px'
-                    }}
+                    className="text-[10px] text-muted-foreground"
+                    style={{ gridColumn: `${label.weekIndex + 1} / span 2` }}
                   >
                     {label.month}
                   </div>
@@ -181,34 +180,39 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
               </div>
               
               {/* Heatmap grid */}
-              <div className="flex gap-0.5">
+              <div className="flex gap-1">
                 {/* Day labels */}
-                <div className="flex flex-col gap-0.5 justify-around pr-1.5 flex-shrink-0">
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Sun</div>
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Mon</div>
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Tue</div>
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Wed</div>
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Thu</div>
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Fri</div>
-                  <div className="h-2.5 text-[10px] text-muted-foreground leading-tight">Sat</div>
+                <div className="grid grid-rows-7 gap-1 pr-1.5 text-[10px] text-muted-foreground">
+                  <div>Sun</div>
+                  <div>Mon</div>
+                  <div>Tue</div>
+                  <div>Wed</div>
+                  <div>Thu</div>
+                  <div>Fri</div>
+                  <div>Sat</div>
                 </div>
                 
                 {/* Weeks */}
-                <div className="flex gap-0.5 flex-1">
+                <div
+                  className="grid flex-1 gap-1"
+                  style={{ gridTemplateColumns: `repeat(${weeks.length}, minmax(0, 1fr))` }}
+                >
                   {weeks.map((week, weekIdx) => (
-                    <div key={weekIdx} className="flex flex-col gap-0.5 flex-shrink-0" style={{ minWidth: '10px' }}>
+                    <div key={weekIdx} className="grid grid-rows-7 gap-1">
                       {week.map((date, dayIdx) => {
                         const count = getDayActivity(date)
-                        const dateStr = date.toISOString().split('T')[0]
-                        const isToday = dateStr === today
+                        const localDateKey = formatLocalDateKey(date)
+                        const isToday = localDateKey === today
+                        const isCurrentYear = date.getFullYear() === currentYear
                         
                         return (
                           <div
                             key={dayIdx}
                             className={cn(
-                              "w-2.5 h-2.5 rounded-sm transition-all cursor-pointer group relative flex-shrink-0",
+                              "w-full aspect-square rounded-sm transition-all cursor-pointer group relative",
                               getIntensityClass(count),
-                              isToday && "ring-1 ring-primary"
+                              isToday && "ring-1 ring-primary",
+                              !isCurrentYear && "opacity-20"
                             )}
                             title={`${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}: ${count} ${count === 1 ? 'problem' : 'problems'} solved`}
                           >

@@ -1,5 +1,12 @@
 import { apiClient } from '../client'
 
+const rawAnalyticsServiceUrl =
+  import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
+
+const ANALYTICS_BASE_URL = rawAnalyticsServiceUrl.includes('/api/analytics')
+  ? rawAnalyticsServiceUrl.replace(/\/$/, '')
+  : `${rawAnalyticsServiceUrl.replace(/\/$/, '')}/api/analytics`
+
 export interface UserAnalytics {
   overview: {
     totalSolved: number
@@ -82,33 +89,24 @@ export interface EfficiencyMetrics {
  * Get complete analytics dashboard for a user
  */
 export const getUserAnalytics = async (userId: string): Promise<UserAnalytics> => {
-  const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
-  const response = await apiClient.get<{ success: boolean; data: UserAnalytics }>(
-    `${analyticsServiceUrl}/dashboard/${userId}`
-  )
-  return response.data.data
+  const response = await apiClient.get<UserAnalytics>(`${ANALYTICS_BASE_URL}/dashboard/${userId}`)
+  return response.data
 }
 
 /**
  * Get activity heatmap for a user
  */
 export const getActivityHeatmap = async (userId: string): Promise<ActivityHeatmap> => {
-  const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
-  const response = await apiClient.get<{ success: boolean; data: ActivityHeatmap }>(
-    `${analyticsServiceUrl}/heatmap/${userId}`
-  )
-  return response.data.data
+  const response = await apiClient.get<ActivityHeatmap>(`${ANALYTICS_BASE_URL}/heatmap/${userId}`)
+  return response.data
 }
 
 /**
  * Get topic strengths for a user (radar chart data)
  */
 export const getTopicStrengths = async (userId: string): Promise<TopicStrength[]> => {
-  const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
-  const response = await apiClient.get<{ success: boolean; data: TopicStrength[] }>(
-    `${analyticsServiceUrl}/topics/${userId}`
-  )
-  return response.data.data
+  const response = await apiClient.get<TopicStrength[]>(`${ANALYTICS_BASE_URL}/topics/${userId}`)
+  return response.data
 }
 
 /**
@@ -118,12 +116,9 @@ export const getEfficiencyMetrics = async (
   userId: string,
   language?: string
 ): Promise<EfficiencyMetrics> => {
-  const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
   const params = language ? `?language=${language}` : ''
-  const response = await apiClient.get<{ success: boolean; data: EfficiencyMetrics }>(
-    `${analyticsServiceUrl}/efficiency/${userId}${params}`
-  )
-  return response.data.data
+  const response = await apiClient.get<EfficiencyMetrics>(`${ANALYTICS_BASE_URL}/efficiency/${userId}${params}`)
+  return response.data
 }
 
 /**
@@ -134,14 +129,10 @@ export const getUserRank = async (userId: string): Promise<{
   percentile: number
   totalUsers: number
 }> => {
-  const analyticsServiceUrl = import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
   const response = await apiClient.get<{
-    success: boolean
-    data: {
-      rank: number
-      percentile: number
-      totalUsers: number
-    }
-  }>(`${analyticsServiceUrl}/rank/${userId}`)
-  return response.data.data
+    rank: number
+    percentile: number
+    totalUsers: number
+  }>(`${ANALYTICS_BASE_URL}/rank/${userId}`)
+  return response.data
 }

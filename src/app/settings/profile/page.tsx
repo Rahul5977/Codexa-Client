@@ -141,6 +141,9 @@ export default function ProfileSettingsPage() {
   const streaks = analytics?.streaks || { current: 0, max: 0, lastActive: null }
   const globalRank = analytics?.globalRank || null
   const problemStats = analytics?.problemStats || { total: 0, easy: 0, medium: 0, hard: 0 }
+  const easyMax = Math.max(problemStats.easy, overview.easySolved, 0)
+  const mediumMax = Math.max(problemStats.medium, overview.mediumSolved, 0)
+  const hardMax = Math.max(problemStats.hard, overview.hardSolved, 0)
 
   return (
     <BaseLayout title="Profile" description="View and manage your profile">
@@ -238,19 +241,19 @@ export default function ProfileSettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SemiCircularProgress
             value={overview.easySolved}
-            max={problemStats.easy || 50}
+            max={easyMax}
             label="Easy Problems"
             color="text-green-500"
           />
           <SemiCircularProgress
             value={overview.mediumSolved}
-            max={problemStats.medium || 50}
+            max={mediumMax}
             label="Medium Problems"
             color="text-yellow-500"
           />
           <SemiCircularProgress
             value={overview.hardSolved}
-            max={problemStats.hard || 30}
+            max={hardMax}
             label="Hard Problems"
             color="text-red-500"
           />
