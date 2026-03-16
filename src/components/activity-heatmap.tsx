@@ -22,8 +22,6 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
     return `${year}-${month}-${day}`
   }
 
-  const formatUTCDateKey = (date: Date) => date.toISOString().split('T')[0]
-
   useEffect(() => {
     const fetchHeatmap = async () => {
       if (!userId) return
@@ -77,9 +75,8 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
   }
 
   const getDayActivity = (date: Date) => {
-    const utcKey = formatUTCDateKey(date)
     const localKey = formatLocalDateKey(date)
-    const count = heatmap?.heatmap[utcKey] ?? heatmap?.heatmap[localKey] ?? 0
+    const count = heatmap?.heatmap[localKey] ?? 0
     return count
   }
 

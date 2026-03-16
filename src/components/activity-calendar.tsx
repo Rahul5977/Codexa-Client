@@ -15,6 +15,13 @@ export function ActivityCalendar({ userId }: ActivityCalendarProps) {
   const [heatmap, setHeatmap] = useState<ActivityHeatmap | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const formatLocalDateKey = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   useEffect(() => {
     const fetchHeatmap = async () => {
       if (!userId) return
@@ -62,8 +69,8 @@ export function ActivityCalendar({ userId }: ActivityCalendarProps) {
   }
 
   const getDayStatus = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
-    const today = new Date().toISOString().split('T')[0]
+    const dateStr = formatLocalDateKey(date)
+    const today = formatLocalDateKey(new Date())
     
     if (dateStr > today) {
       return { type: 'future', count: 0 }
@@ -161,8 +168,8 @@ export function ActivityCalendar({ userId }: ActivityCalendarProps) {
               <div key={weekIdx} className="grid grid-cols-7 gap-1">
                 {week.map((date, dayIdx) => {
                   const status = getDayStatus(date)
-                  const dateStr = date.toISOString().split('T')[0]
-                  const isToday = dateStr === new Date().toISOString().split('T')[0]
+                  const dateStr = formatLocalDateKey(date)
+                  const isToday = dateStr === formatLocalDateKey(new Date())
                   
                   return (
                     <div

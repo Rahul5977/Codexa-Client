@@ -3,9 +3,13 @@ import { apiClient } from '../client'
 const rawAnalyticsServiceUrl =
   import.meta.env.VITE_ANALYTICS_SERVICE_URL || 'http://localhost:3005'
 
-const ANALYTICS_BASE_URL = rawAnalyticsServiceUrl.includes('/api/analytics')
-  ? rawAnalyticsServiceUrl.replace(/\/$/, '')
-  : `${rawAnalyticsServiceUrl.replace(/\/$/, '')}/api/analytics`
+const normalizedAnalyticsServiceUrl = rawAnalyticsServiceUrl.replace(/\/$/, '')
+
+const ANALYTICS_BASE_URL = normalizedAnalyticsServiceUrl.endsWith('/api/analytics')
+  ? normalizedAnalyticsServiceUrl
+  : normalizedAnalyticsServiceUrl.endsWith('/api')
+    ? `${normalizedAnalyticsServiceUrl}/analytics`
+    : `${normalizedAnalyticsServiceUrl}/api/analytics`
 
 export interface UserAnalytics {
   overview: {
