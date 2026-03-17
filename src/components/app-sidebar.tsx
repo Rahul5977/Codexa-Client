@@ -7,6 +7,7 @@ import {
   CheckSquare,
   MessageCircle,
   Calendar,
+  BarChart3,
   AlertTriangle,
   Settings,
   HelpCircle,
@@ -74,6 +75,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             title: "Calendar",
             url: "/calendar",
             icon: Calendar,
+          },
+          {
+            title: "Analytics",
+            url: "/analytics",
+            icon: BarChart3,
           },
           {
             title: "Users",

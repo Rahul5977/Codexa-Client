@@ -89,6 +89,39 @@ export interface EfficiencyMetrics {
   globalAvg: number
 }
 
+export type AnalyticsPeriod = 'weekly' | 'monthly' | 'yearly'
+
+export interface TimeframeAnalytics {
+  period: AnalyticsPeriod
+  range: {
+    start: string
+    end: string
+  }
+  solvedOverTime: Array<{
+    key: string
+    label: string
+    solved: number
+  }>
+  byTag: Array<{
+    tag: string
+    solved: number
+  }>
+  byDifficulty: Array<{
+    difficulty: string
+    solved: number
+  }>
+  summary: {
+    totalSolved: number
+    activeBuckets: number
+    avgSolvedPerActiveBucket: number
+    bestBucket: {
+      key: string
+      label: string
+      solved: number
+    } | null
+  }
+}
+
 /**
  * Get complete analytics dashboard for a user
  */
@@ -138,5 +171,18 @@ export const getUserRank = async (userId: string): Promise<{
     percentile: number
     totalUsers: number
   }>(`${ANALYTICS_BASE_URL}/rank/${userId}`)
+  return response.data
+}
+
+/**
+ * Get timeframe analytics for weekly/monthly/yearly charts.
+ */
+export const getTimeframeAnalytics = async (
+  userId: string,
+  period: AnalyticsPeriod
+): Promise<TimeframeAnalytics> => {
+  const response = await apiClient.get<TimeframeAnalytics>(`${ANALYTICS_BASE_URL}/timeframe/${userId}`, {
+    params: { period }
+  })
   return response.data
 }

@@ -10,6 +10,7 @@ const Mail = lazy(() => import('@/app/mail/page'))
 const Tasks = lazy(() => import('@/app/tasks/page'))
 const Chat = lazy(() => import('@/app/chat/page'))
 const Calendar = lazy(() => import('@/app/calendar/page'))
+const Analytics = lazy(() => import('@/app/analytics/page'))
 const Users = lazy(() => import('@/app/users/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const CodePage = lazy(() => import('@/app/code/page'))
@@ -92,6 +93,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/calendar",
     element: <ProtectedRoute><Calendar /></ProtectedRoute>
+  },
+  {
+    path: "/analytics",
+    element: <ProtectedRoute><Analytics /></ProtectedRoute>
   },
   {
     path: "/code",
