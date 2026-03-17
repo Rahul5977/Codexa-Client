@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Calendar, ChevronLeft, ChevronRight, Flame } from "lucide-react"
+import { Calendar, ChevronLeft, ChevronRight, Flame, Snowflake } from "lucide-react"
 import { getActivityHeatmap, type ActivityHeatmap } from "@/api/services/analytics"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,13 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
   const [heatmap, setHeatmap] = useState<ActivityHeatmap | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
+
+  const formatLocalDateKey = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
 
   useEffect(() => {
     const fetchHeatmap = async () => {
@@ -64,46 +71,35 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
   }
 
   const getDayActivity = (date: Date | null) => {
-    if (!date) return { count: 0, type: 'empty' }
-    
-    const dateStr = date.toISOString().split('T')[0]
+    if (!date) return { count: 0, type: 'empty' as const }
+
+    const dateStr = formatLocalDateKey(date)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const compareDate = new Date(date)
     compareDate.setHours(0, 0, 0, 0)
-    
+
     if (compareDate > today) {
-      return { count: 0, type: 'future' }
+      return { count: 0, type: 'future' as const }
     }
-    
+
     const count = heatmap?.heatmap[dateStr] || 0
-    return { count, type: count > 0 ? 'active' : 'inactive' }
+    return { count, type: count > 0 ? 'active' as const : 'inactive' as const }
   }
 
-  const getDayClass = (activity: { count: number, type: string }, isToday: boolean) => {
-    const baseClass = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors cursor-pointer"
+  const getDayClass = (activity: { count: number, type: 'empty' | 'future' | 'active' | 'inactive' }, isToday: boolean) => {
+    const baseClass = "h-10 w-10 rounded-lg flex items-center justify-center text-sm font-medium transition-colors cursor-pointer relative border border-border/50"
     
     if (activity.type === 'empty') {
       return cn(baseClass, "invisible")
     }
-    
-    if (activity.type === 'future') {
-      return cn(baseClass, "bg-muted/30 text-muted-foreground border border-dashed")
-    }
-    
-    if (activity.type === 'active') {
-      // Green intensity based on count
-      if (activity.count >= 3) return cn(baseClass, "bg-green-500/80 text-white hover:bg-green-500")
-      if (activity.count === 2) return cn(baseClass, "bg-green-500/60 text-white hover:bg-green-500")
-      return cn(baseClass, "bg-green-500/40 text-white hover:bg-green-500")
-    }
-    
-    if (isToday) {
-      return cn(baseClass, "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2")
-    }
-    
-    // Inactive (past day with no activity)
-    return cn(baseClass, "bg-red-500/20 text-foreground hover:bg-red-500/30")
+
+    return cn(
+      baseClass,
+      "bg-muted/20 hover:bg-muted/40",
+      isToday && "ring-1 ring-primary",
+      activity.type === 'future' && "opacity-60"
+    )
   }
 
   const previousMonth = () => {
@@ -185,9 +181,28 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
                 <div
                   key={idx}
                   className={getDayClass(activity, today)}
-                  title={date ? `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${activity.count} solved` : ''}
+                  title={date ? (activity.type === 'future' ? `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: Upcoming` : `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: ${activity.count} solved`) : ''}
                 >
-                  {date && date.getDate()}
+                  {date && (
+                    <>
+                      {activity.type === 'future' ? (
+                        <span className="text-sm font-semibold text-muted-foreground">
+                          {date.getDate()}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="absolute left-1 top-0.5 text-[10px] text-muted-foreground">
+                            {date.getDate()}
+                          </span>
+                          {activity.count > 0 ? (
+                            <Flame className="h-4 w-4 text-orange-500" />
+                          ) : (
+                            <Snowflake className="h-4 w-4 text-cyan-400" />
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               )
             })}
@@ -196,16 +211,13 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
           {/* Legend */}
           <div className="flex items-center justify-center gap-4 pt-4 text-xs text-muted-foreground border-t">
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-red-500/20" />
-              <span>No activity</span>
+              <Snowflake className="h-3.5 w-3.5 text-cyan-400" />
+              <span>No solve</span>
             </div>
+            <div className="h-3 w-px bg-border" />
             <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-green-500/40" />
-              <span>1-2 solved</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-green-500/80" />
-              <span>3+ solved</span>
+              <Flame className="h-3.5 w-3.5 text-orange-500" />
+              <span>Solved</span>
             </div>
           </div>
         </div>
