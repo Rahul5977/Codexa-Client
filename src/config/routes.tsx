@@ -12,6 +12,7 @@ const Calendar = lazy(() => import('@/app/calendar/page'))
 const Analytics = lazy(() => import('@/app/analytics/page'))
 const AdminCreateProblem = lazy(() => import('@/app/admin/create-problem/page'))
 const Users = lazy(() => import('@/app/users/page'))
+const UserProfileView = lazy(() => import('@/app/users/profile-view/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const CodePage = lazy(() => import('@/app/code/page'))
 const CoursesPage = lazy(() => import('@/app/courses/page'))
@@ -146,7 +147,11 @@ export const routes: RouteConfig[] = [
   // Content Pages
   {
     path: "/users",
-    element: <Users />
+    element: <ProtectedRoute><Users /></ProtectedRoute>
+  },
+  {
+    path: "/users/:userId",
+    element: <ProtectedRoute><UserProfileView /></ProtectedRoute>
   },
   {
     path: "/faqs",

@@ -3,15 +3,15 @@
 import * as React from "react"
 import {
   LayoutDashboard,
-  Mail,
-  CheckSquare,
-  MessageCircle,
-  Calendar,
+  // Mail,
+  // CheckSquare,
+  // MessageCircle,
+  // Calendar,
   BarChart3,
   FilePlus2,
-  AlertTriangle,
-  Settings,
-  HelpCircle,
+  // AlertTriangle,
+  // Settings,
+  // HelpCircle,
   Users,
   GraduationCap,
 } from "lucide-react"
@@ -57,26 +57,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "/courses",
             icon: GraduationCap,
           },
-          {
-            title: "Mail",
-            url: "/mail",
-            icon: Mail,
-          },
-          {
-            title: "Tasks",
-            url: "/tasks",
-            icon: CheckSquare,
-          },
-          {
-            title: "Chat",
-            url: "/chat",
-            icon: MessageCircle,
-          },
-          {
-            title: "Calendar",
-            url: "/calendar",
-            icon: Calendar,
-          },
+          // {
+          //   title: "Mail",
+          //   url: "/mail",
+          //   icon: Mail,
+          // },
+          // {
+          //   title: "Tasks",
+          //   url: "/tasks",
+          //   icon: CheckSquare,
+          // },
+          // {
+          //   title: "Chat",
+          //   url: "/chat",
+          //   icon: MessageCircle,
+          // },
+          // {
+          //   title: "Calendar",
+          //   url: "/calendar",
+          //   icon: Calendar,
+          // },
           {
             title: "Analytics",
             url: "/analytics",
@@ -98,62 +98,62 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             : []),
         ],
       },
-      {
-        label: "Pages",
-        items: [
-          {
-            title: "Errors",
-            url: "#",
-            icon: AlertTriangle,
-            items: [
-              {
-                title: "Unauthorized",
-                url: "/errors/unauthorized",
-              },
-              {
-                title: "Forbidden",
-                url: "/errors/forbidden",
-              },
-              {
-                title: "Not Found",
-                url: "/errors/not-found",
-              },
-              {
-                title: "Internal Server Error",
-                url: "/errors/internal-server-error",
-              },
-              {
-                title: "Under Maintenance",
-                url: "/errors/under-maintenance",
-              },
-            ],
-          },
-          {
-            title: "Settings",
-            url: "#",
-            icon: Settings,
-            items: [
-              {
-                title: "Profile",
-                url: "/settings/profile",
-              },
-              {
-                title: "Appearance",
-                url: "/settings/appearance",
-              },
-              {
-                title: "Connections",
-                url: "/settings/connections",
-              },
-            ],
-          },
-          {
-            title: "FAQs",
-            url: "/faqs",
-            icon: HelpCircle,
-          },
-        ],
-      },
+      // {
+      //   label: "Pages",
+      //   items: [
+      //     {
+      //       title: "Errors",
+      //       url: "#",
+      //       icon: AlertTriangle,
+      //       items: [
+      //         {
+      //           title: "Unauthorized",
+      //           url: "/errors/unauthorized",
+      //         },
+      //         {
+      //           title: "Forbidden",
+      //           url: "/errors/forbidden",
+      //         },
+      //         {
+      //           title: "Not Found",
+      //           url: "/errors/not-found",
+      //         },
+      //         {
+      //           title: "Internal Server Error",
+      //           url: "/errors/internal-server-error",
+      //         },
+      //         {
+      //           title: "Under Maintenance",
+      //           url: "/errors/under-maintenance",
+      //         },
+      //       ],
+      //     },
+      //     {
+      //       title: "Settings",
+      //       url: "#",
+      //       icon: Settings,
+      //       items: [
+      //         {
+      //           title: "Profile",
+      //           url: "/settings/profile",
+      //         },
+      //         {
+      //           title: "Appearance",
+      //           url: "/settings/appearance",
+      //         },
+      //         {
+      //           title: "Connections",
+      //           url: "/settings/connections",
+      //         },
+      //       ],
+      //     },
+      //     {
+      //       title: "FAQs",
+      //       url: "/faqs",
+      //       icon: HelpCircle,
+      //     },
+      //   ],
+      // },
     ],
   }
 

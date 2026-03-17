@@ -1,39 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   type ColumnDef,
-  type ColumnFiltersState,
   type SortingState,
   type VisibilityState,
-  type Row,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import {
-  ChevronDown,
-  EllipsisVertical,
-  Eye,
-  Pencil,
-  Trash2,
-  Download,
-  Search,
-} from "lucide-react"
+import { ChevronDown, Eye, Flame, Search, Star } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -53,348 +40,249 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { UserFormDialog } from "./user-form-dialog"
+import { authService, type UsersListFilters, type UsersListItem } from "@/api/services/auth"
+import { useToast } from "@/hooks/use-toast"
 
-interface User {
-  id: number
-  name: string
-  email: string
-  avatar: string
-  role: string
-  plan: string
-  billing: string
-  status: string
-  joinedDate: string
-  lastLogin: string
-}
+export function DataTable() {
+  const navigate = useNavigate()
+  const { toast } = useToast()
 
-interface UserFormValues {
-  name: string
-  email: string
-  role: string
-  plan: string
-  billing: string
-  status: string
-}
+  const [users, setUsers] = useState<UsersListItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null)
 
-interface DataTableProps {
-  users: User[]
-  onDeleteUser: (id: number) => void
-  onEditUser: (user: User) => void
-  onAddUser: (userData: UserFormValues) => void
-}
-
-export function DataTable({ users, onDeleteUser, onEditUser, onAddUser }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = useState({})
-  const [globalFilter, setGlobalFilter] = useState("")
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20"
-      case "Pending":
-        return "text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/20"
-      case "Error":
-        return "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20"
-      case "Inactive":
-        return "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20"
-      default:
-        return "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20"
+  const [search, setSearch] = useState("")
+  const [roleFilter, setRoleFilter] = useState<UsersListFilters["role"]>("all")
+  const [friendFilter, setFriendFilter] = useState<UsersListFilters["friend"]>("all")
+  const [streakFilter, setStreakFilter] = useState<string>("all")
+
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const filters: UsersListFilters = {
+        search: debouncedSearch,
+        role: roleFilter,
+        friend: friendFilter,
+        minStreak: streakFilter === "all" ? undefined : Number(streakFilter),
+      }
+      const data = await authService.listUsers(filters)
+      setUsers(data)
+    } catch (error: any) {
+      toast({
+        title: "Failed to load users",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "Admin":
-        return "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/20"
-      case "Editor":
-        return "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20"
-      case "Author":
-        return "text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20"
-      case "Maintainer":
-        return "text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/20"
-      case "Subscriber":
-        return "text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/20"
-      default:
-        return "text-gray-600 bg-gray-50 dark:text-gray-400 dark:bg-gray-900/20"
+  useEffect(() => {
+    fetchUsers()
+  }, [debouncedSearch, roleFilter, friendFilter, streakFilter])
+
+  const getInitials = (name: string) => {
+    const names = name.split(" ")
+    if (names.length >= 2) return `${names[0][0]}${names[1][0]}`.toUpperCase()
+    return name.substring(0, 2).toUpperCase()
+  }
+
+  const handleToggleFriend = async (event: React.MouseEvent, userId: string) => {
+    event.stopPropagation()
+    try {
+      setTogglingUserId(userId)
+      const result = await authService.toggleFriend(userId)
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, isFriend: result.isFriend } : user,
+        ),
+      )
+    } catch (error: any) {
+      toast({
+        title: "Friend action failed",
+        description: error?.message || "Please try again",
+        variant: "destructive",
+      })
+    } finally {
+      setTogglingUserId(null)
     }
   }
 
-  const exactFilter = (row: Row<User>, columnId: string, value: string) => {
-    return row.getValue(columnId) === value
-  }
-
-  const columns: ColumnDef<User>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <div className="flex items-center justify-center px-2">
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        </div>
-      ),
-      cell: ({ row }) => (
-        <div className="flex items-center justify-center px-2">
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
-        </div>
-      ),
-      enableSorting: false,
-      enableHiding: false,
-      size: 50,
-    },
-    {
-      accessorKey: "name",
-      header: "User",
-      cell: ({ row }) => {
-        const user = row.original
-        return (
-          <div className="flex items-center gap-3">
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs font-medium">
-                {user.avatar}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className="font-medium">{user.name}</span>
-              <span className="text-sm text-muted-foreground">{user.email}</span>
+  const columns = useMemo<ColumnDef<UsersListItem>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "User",
+        cell: ({ row }) => {
+          const user = row.original
+          return (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.image_url} />
+                <AvatarFallback className="text-xs font-medium">{getInitials(user.name)}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <span className="font-medium truncate">{user.name}</span>
+                <span className="text-sm text-muted-foreground truncate">{user.email}</span>
+              </div>
             </div>
-          </div>
-        )
+          )
+        },
       },
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      cell: ({ row }) => {
-        const role = row.getValue("role") as string
-        return (
-          <Badge variant="secondary" className={getRoleColor(role)}>
-            {role}
-          </Badge>
-        )
+      {
+        id: "difficulty",
+        header: "Solved (E/M/H)",
+        cell: ({ row }) => {
+          const user = row.original
+          return (
+            <div className="flex items-center gap-1 text-xs">
+              <Badge className="text-green-600 bg-green-100 dark:bg-green-900/30">{user.easySolved}</Badge>
+              <Badge className="text-yellow-600 bg-yellow-100 dark:bg-yellow-900/30">{user.mediumSolved}</Badge>
+              <Badge className="text-red-600 bg-red-100 dark:bg-red-900/30">{user.hardSolved}</Badge>
+            </div>
+          )
+        },
       },
-      filterFn: exactFilter,
-    },
-    {
-      accessorKey: "plan",
-      header: "Plan",
-      cell: ({ row }) => {
-        const plan = row.getValue("plan") as string
-        return <span className="font-medium">{plan}</span>
+      {
+        accessorKey: "totalSolved",
+        header: "Total",
+        cell: ({ row }) => <span className="font-semibold">{row.original.totalSolved}</span>,
       },
-      filterFn: exactFilter,
-    },
-    {
-      accessorKey: "billing",
-      header: "Billing",
-      cell: ({ row }) => {
-        const billing = row.getValue("billing") as string
-        return <span className="text-sm">{billing}</span>
+      {
+        accessorKey: "streakCurrent",
+        header: "Streak",
+        cell: ({ row }) => (
+          <span className="inline-flex items-center gap-1 text-sm font-medium">
+            <Flame className="h-3.5 w-3.5 text-orange-500" />
+            {row.original.streakCurrent}
+          </span>
+        ),
       },
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => {
-        const status = row.getValue("status") as string
-        return (
-          <Badge variant="secondary" className={getStatusColor(status)}>
-            {status}
-          </Badge>
-        )
-      },
-      filterFn: exactFilter,
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      cell: ({ row }) => {
-        const user = row.original
-        return (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer">
-              <Eye className="size-4" />
-              <span className="sr-only">View user</span>
-            </Button>
+      {
+        id: "friend",
+        header: "Friend",
+        cell: ({ row }) => {
+          const user = row.original
+          if (user.isSelf) return <span className="text-xs text-muted-foreground">You</span>
+          return (
             <Button
-              variant="ghost"
               size="icon"
-              className="h-8 w-8 cursor-pointer"
-              onClick={() => onEditUser(user)}
+              variant={user.isFriend ? "default" : "outline"}
+              className="h-8 w-8"
+              disabled={togglingUserId === user.id}
+              onClick={(event) => handleToggleFriend(event, user.id)}
             >
-              <Pencil className="size-4" />
-              <span className="sr-only">Edit user</span>
+              <Star className={`h-4 w-4 ${user.isFriend ? "fill-current" : ""}`} />
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer">
-                  <EllipsisVertical className="size-4" />
-                  <span className="sr-only">More actions</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem className="cursor-pointer">
-                  View Details
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  Send Email
-                </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">
-                  Reset Password
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  variant="destructive"
-                  className="cursor-pointer"
-                  onClick={() => onDeleteUser(user.id)}
-                >
-                  <Trash2 className="mr-2 size-4" />
-                  Delete User
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )
+          )
+        },
       },
-    },
-  ]
+      {
+        id: "actions",
+        header: "Actions",
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={(event) => {
+              event.stopPropagation()
+              navigate(`/users/${row.original.id}`)
+            }}
+          >
+            <Eye className="size-4" />
+            <span className="sr-only">View profile</span>
+          </Button>
+        ),
+      },
+    ],
+    [navigate, togglingUserId],
+  )
 
   const table = useReactTable({
     data: users,
     columns,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
     state: {
       sorting,
-      columnFilters,
       columnVisibility,
-      rowSelection,
-      globalFilter,
     },
   })
-
-  const roleFilter = table.getColumn("role")?.getFilterValue() as string
-  const planFilter = table.getColumn("plan")?.getFilterValue() as string
-  const statusFilter = table.getColumn("status")?.getFilterValue() as string
 
   return (
     <div className="w-full space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 items-center space-x-2">
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search users..."
-              value={globalFilter ?? ""}
-              onChange={(event) => setGlobalFilter(String(event.target.value))}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
               className="pl-9"
             />
           </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" className="cursor-pointer">
-            <Download className="mr-2 size-4" />
-            Export
-          </Button>
-          <UserFormDialog onAddUser={onAddUser} />
         </div>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-4 sm:gap-4">
         <div className="space-y-2">
-          <Label htmlFor="role-filter" className="text-sm font-medium">
-            Role
-          </Label>
-          <Select
-            value={roleFilter || ""}
-            onValueChange={(value) =>
-              table.getColumn("role")?.setFilterValue(value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="cursor-pointer w-full" id="role-filter">
-              <SelectValue placeholder="Select Role" />
-            </SelectTrigger>
+          <Label className="text-sm font-medium">Role</Label>
+          <Select value={roleFilter || "all"} onValueChange={(value) => setRoleFilter(value as any)}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Select Role" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="Admin">Admin</SelectItem>
-              <SelectItem value="Author">Author</SelectItem>
-              <SelectItem value="Editor">Editor</SelectItem>
-              <SelectItem value="Maintainer">Maintainer</SelectItem>
-              <SelectItem value="Subscriber">Subscriber</SelectItem>
+              <SelectItem value="USER">User</SelectItem>
+              <SelectItem value="STUDENT">Student</SelectItem>
+              <SelectItem value="TEACHER">Teacher</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="plan-filter" className="text-sm font-medium">
-            Plan
-          </Label>
-          <Select
-            value={planFilter || ""}
-            onValueChange={(value) =>
-              table.getColumn("plan")?.setFilterValue(value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="cursor-pointer w-full" id="plan-filter">
-              <SelectValue placeholder="Select Plan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Plans</SelectItem>
-              <SelectItem value="Basic">Basic</SelectItem>
-              <SelectItem value="Professional">Professional</SelectItem>
-              <SelectItem value="Enterprise">Enterprise</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="status-filter" className="text-sm font-medium">
-            Status
-          </Label>
-          <Select
-            value={statusFilter || ""}
-            onValueChange={(value) =>
-              table.getColumn("status")?.setFilterValue(value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="cursor-pointer w-full" id="status-filter">
-              <SelectValue placeholder="Select Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Pending">Pending</SelectItem>
-              <SelectItem value="Error">Error</SelectItem>
-              <SelectItem value="Inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
 
-          <Label htmlFor="column-visibility" className="text-sm font-medium">
-            Column Visibility
-          </Label>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Friendship</Label>
+          <Select value={friendFilter || "all"} onValueChange={(value) => setFriendFilter(value as any)}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Select Friendship" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="true">Friends</SelectItem>
+              <SelectItem value="false">Not Friends</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Min Streak</Label>
+          <Select value={streakFilter} onValueChange={setStreakFilter}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Select Streak" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any</SelectItem>
+              <SelectItem value="1">1+</SelectItem>
+              <SelectItem value="7">7+</SelectItem>
+              <SelectItem value="30">30+</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Column Visibility</Label>
           <DropdownMenu>
-            <DropdownMenuTrigger asChild id="column-visibility">
-              <Button variant="outline" className="cursor-pointer w-full">
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-full">
                 Columns <ChevronDown className="ml-2 size-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -402,20 +290,16 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser }: DataTa
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -426,44 +310,35 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser }: DataTa
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-24 text-center">
+                  Loading users...
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
+                  className="cursor-default"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
+                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
@@ -473,58 +348,19 @@ export function DataTable({ users, onDeleteUser, onEditUser, onAddUser }: DataTa
       </div>
 
       <div className="flex items-center justify-between space-x-2 py-4">
-
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="page-size" className="text-sm font-medium">
-            Show
-          </Label>
-          <Select
-            value={`${table.getState().pagination.pageSize}`}
-            onValueChange={(value) => {
-              table.setPageSize(Number(value))
-            }}
-          >
-            <SelectTrigger className="w-20 cursor-pointer" id="page-size">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((pageSize) => (
-                <SelectItem key={pageSize} value={`${pageSize}`}>
-                  {pageSize}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex-1 text-sm text-muted-foreground hidden sm:block">
-          {table.getFilteredSelectedRowModel().rows.length} of{" "}
-          {table.getFilteredRowModel().rows.length} row(s) selected.
-        </div>
+        <div className="flex-1 text-sm text-muted-foreground hidden sm:block" />
         <div className="flex items-center space-x-6 lg:space-x-8">
           <div className="flex items-center space-x-2 hidden sm:flex">
             <p className="text-sm font-medium">Page</p>
             <strong className="text-sm">
-              {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
             </strong>
           </div>
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="cursor-pointer"
-            >
+            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
               Previous
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="cursor-pointer"
-            >
+            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
               Next
             </Button>
           </div>

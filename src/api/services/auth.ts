@@ -41,6 +41,50 @@ export interface VerifyOTPResponse {
   resetToken?: string
 }
 
+export interface UsersListItem {
+  id: string
+  name: string
+  email: string
+  role: string
+  image_url?: string
+  totalSolved: number
+  easySolved: number
+  mediumSolved: number
+  hardSolved: number
+  streakCurrent: number
+  streakMax: number
+  currentRating: number
+  isFriend: boolean
+  isSelf: boolean
+}
+
+export interface UsersListFilters {
+  search?: string
+  role?: "USER" | "STUDENT" | "TEACHER" | "all"
+  friend?: "all" | "true" | "false"
+  minStreak?: number
+}
+
+export interface PublicUserProfile {
+  id: string
+  name: string
+  email: string
+  role: string
+  image_url?: string
+  bio?: string
+  currentRating: number
+  totalSolved: number
+  easySolved: number
+  mediumSolved: number
+  hardSolved: number
+  streakCurrent: number
+  streakMax: number
+  lastActive: string | null
+  createdAt: string
+  isFriend: boolean
+  isSelf: boolean
+}
+
 // Backend API response wrapper
 interface ApiResponseWrapper<T> {
   statusCode: number
@@ -201,5 +245,44 @@ export const authService = {
       formData
     )
     return (response as any).data.user
+  },
+
+  /**
+   * Get list of users for social discovery page
+   */
+  listUsers: async (filters?: UsersListFilters): Promise<UsersListItem[]> => {
+    const params = new URLSearchParams()
+    if (filters?.search?.trim()) params.append("search", filters.search.trim())
+    if (filters?.role && filters.role !== "all") params.append("role", filters.role)
+    if (filters?.friend && filters.friend !== "all") params.append("friend", filters.friend)
+    if (typeof filters?.minStreak === "number" && filters.minStreak > 0) {
+      params.append("minStreak", String(filters.minStreak))
+    }
+
+    const query = params.toString()
+    const response = await apiClient.get<ApiResponseWrapper<UsersListItem[]>>(
+      `${API_CONFIG.AUTH_SERVICE_URL}/users${query ? `?${query}` : ""}`
+    )
+    return (response as any).data
+  },
+
+  /**
+   * Get public profile of a user (view-only)
+   */
+  getPublicUserProfile: async (userId: string): Promise<PublicUserProfile> => {
+    const response = await apiClient.get<ApiResponseWrapper<PublicUserProfile>>(
+      `${API_CONFIG.AUTH_SERVICE_URL}/users/${userId}`
+    )
+    return (response as any).data
+  },
+
+  /**
+   * Toggle friend status with target user
+   */
+  toggleFriend: async (userId: string): Promise<{ userId: string; isFriend: boolean }> => {
+    const response = await apiClient.post<ApiResponseWrapper<{ userId: string; isFriend: boolean }>>(
+      `${API_CONFIG.AUTH_SERVICE_URL}/friends/${userId}/toggle`
+    )
+    return (response as any).data
   },
 }
