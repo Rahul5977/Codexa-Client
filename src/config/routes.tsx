@@ -5,12 +5,12 @@ import { ProtectedRoute, PublicRoute } from '@/components/router/protected-route
 // Lazy load components for better performance
 const Landing = lazy(() => import('@/app/landing/page'))
 const Dashboard = lazy(() => import('@/app/dashboard/page'))
-const Dashboard2 = lazy(() => import('@/app/dashboard-2/page'))
 const Mail = lazy(() => import('@/app/mail/page'))
 const Tasks = lazy(() => import('@/app/tasks/page'))
 const Chat = lazy(() => import('@/app/chat/page'))
 const Calendar = lazy(() => import('@/app/calendar/page'))
 const Analytics = lazy(() => import('@/app/analytics/page'))
+const AdminCreateProblem = lazy(() => import('@/app/admin/create-problem/page'))
 const Users = lazy(() => import('@/app/users/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const CodePage = lazy(() => import('@/app/code/page'))
@@ -70,7 +70,11 @@ export const routes: RouteConfig[] = [
   },
   {
     path: "/admin/dashboard",
-    element: <ProtectedRoute allowedRoles={['ADMIN']}><Dashboard2 /></ProtectedRoute>
+    element: <ProtectedRoute allowedRoles={['ADMIN']}><Dashboard /></ProtectedRoute>
+  },
+  {
+    path: "/admin/create-problem",
+    element: <ProtectedRoute allowedRoles={['ADMIN']}><AdminCreateProblem /></ProtectedRoute>
   },
 
   // Application Routes

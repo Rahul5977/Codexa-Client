@@ -56,6 +56,7 @@ export default function CodePage() {
   const [isViewingSubmission, setIsViewingSubmission] = useState(false)
   const [viewingStudentName, setViewingStudentName] = useState<string | null>(null)
   const [teacherTestCases, setTeacherTestCases] = useState<{ testcases: TestCase[]; hiddenTestcases: TestCase[] } | null>(null)
+  const [customTestCases, setCustomTestCases] = useState<Array<{ id: string; input: string; expectedOutput: string }>>([])
 
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
@@ -259,7 +260,7 @@ export default function CodePage() {
       return
     }
 
-    if (!problem?.examples || problem.examples.length === 0) {
+    if ((!problem?.examples || problem.examples.length === 0) && customTestCases.length === 0) {
       toast.error("No test cases available for this problem")
       return
     }
@@ -271,17 +272,32 @@ export default function CodePage() {
     toast.info(`Running your code against ${problem.examples.length} test case(s)...`)
 
     try {
-      const testCases = problem.examples.map((example) => ({
+      const baseTestCases = (problem?.examples || []).map((example) => ({
         input: example.input,
         expectedOutput: example.output
       }))
+
+      const customCases = customTestCases
+        .filter((testCase) => testCase.input.trim() !== '')
+        .map((testCase) => ({
+          input: testCase.input,
+          expectedOutput: testCase.expectedOutput,
+        }))
+
+      const testCases = [...baseTestCases, ...customCases]
+
+      if (testCases.length === 0) {
+        toast.error("Add at least one test case input")
+        return
+      }
+
       await runCodeMultiple(testCases, code, languageId, problemId || '')
       toast.success("Code executed successfully!")
     } catch (error) {
       console.error("Run error:", error)
       toast.error("Failed to run code. Please try again.")
     }
-  }, [code, languageId, runCodeMultiple, setActiveTab, problem, problemId, clearSubmission])
+  }, [code, languageId, runCodeMultiple, setActiveTab, problem, problemId, clearSubmission, customTestCases])
 
   const handleRunAllTestCases = useCallback(async () => {
     if (!code || code.trim() === '') {
@@ -385,7 +401,30 @@ export default function CodePage() {
   }, [navigate, assignmentId, courseId])
 
   const handleAddTest = useCallback(() => {
+    setCustomTestCases((prev) => [
+      ...prev,
+      {
+        id: `custom-${crypto.randomUUID()}`,
+        input: "",
+        expectedOutput: "",
+      },
+    ])
     setActiveTab("testcases")
+  }, [])
+
+  const handleCustomTestCaseChange = useCallback(
+    (id: string, field: "input" | "expectedOutput", value: string) => {
+      setCustomTestCases((prev) =>
+        prev.map((testCase) =>
+          testCase.id === id ? { ...testCase, [field]: value } : testCase
+        )
+      )
+    },
+    []
+  )
+
+  const handleCustomTestCaseRemove = useCallback((id: string) => {
+    setCustomTestCases((prev) => prev.filter((testCase) => testCase.id !== id))
   }, [])
 
   // Update code and language state and refs
@@ -747,6 +786,9 @@ export default function CodePage() {
                       submission={submission}
                       isRunning={isRunning}
                       teacherTestCases={teacherTestCases}
+                      customTestCases={customTestCases}
+                      onCustomTestCaseChange={handleCustomTestCaseChange}
+                      onCustomTestCaseRemove={handleCustomTestCaseRemove}
                     />
                   </TabsContent>
 

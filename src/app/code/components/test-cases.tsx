@@ -2,9 +2,11 @@
 
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Loader2, AlertCircle, CheckCircle2, XCircle, Clock } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
+import { Loader2, AlertCircle, CheckCircle2, XCircle, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { type Problem } from "@/api/services/problem"
 import { type RunCodeResult, type SubmissionResult } from "@/api/services/submission"
@@ -27,9 +29,22 @@ interface TestCasesProps {
   submission?: SubmissionResult | null
   isRunning?: boolean
   teacherTestCases?: { testcases: { input: string; output: string }[]; hiddenTestcases: { input: string; output: string }[] } | null
+  customTestCases?: Array<{ id: string; input: string; expectedOutput: string }>
+  onCustomTestCaseChange?: (id: string, field: "input" | "expectedOutput", value: string) => void
+  onCustomTestCaseRemove?: (id: string) => void
 }
 
-export function TestCases({ problem, loading, runResults, submission, isRunning, teacherTestCases }: TestCasesProps) {
+export function TestCases({
+  problem,
+  loading,
+  runResults,
+  submission,
+  isRunning,
+  teacherTestCases,
+  customTestCases = [],
+  onCustomTestCaseChange,
+  onCustomTestCaseRemove,
+}: TestCasesProps) {
 
   const getStatusIcon = (status: TestCase['status']) => {
     switch (status) {
@@ -97,6 +112,16 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
     })
   }
 
+  customTestCases.forEach((testCase) => {
+    testCases.push({
+      id: testCase.id,
+      input: testCase.input,
+      expectedOutput: testCase.expectedOutput,
+      status: isRunning ? 'running' : 'pending',
+      isCustom: true,
+    })
+  })
+
   // Show run result - takes priority over submission
   if (runResults && runResults.length > 0) {
     console.log('Processing run results:', runResults)
@@ -104,7 +129,9 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
       if (testCases[index] && runResult) {
         const actualOut = (runResult.stdout || '').trim()
         const expectedOut = testCases[index].expectedOutput.trim()
-        const isCorrect = actualOut === expectedOut
+        const isCorrect = expectedOut === ''
+          ? !(runResult.stderr || runResult.compile_output)
+          : actualOut === expectedOut
 
         console.log(`Test case ${index + 1}:`, {
           actualOutput: actualOut,
@@ -228,17 +255,50 @@ export function TestCases({ problem, loading, runResults, submission, isRunning,
                   <div className="space-y-3 text-sm">
                     <div>
                       <div className="text-muted-foreground font-semibold mb-1">Input:</div>
-                      <pre className="text-foreground bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words text-sm font-mono">
-                        {testCase.input}
-                      </pre>
+                      {testCase.isCustom && onCustomTestCaseChange ? (
+                        <Textarea
+                          value={testCase.input}
+                          onChange={(e) => onCustomTestCaseChange(testCase.id, "input", e.target.value)}
+                          rows={3}
+                          placeholder="Enter custom input"
+                          className="font-mono"
+                        />
+                      ) : (
+                        <pre className="text-foreground bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words text-sm font-mono">
+                          {testCase.input}
+                        </pre>
+                      )}
                     </div>
 
                     <div>
                       <div className="text-muted-foreground font-semibold mb-1">Expected Output:</div>
-                      <pre className="text-primary font-semibold bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words text-sm font-mono">
-                        {testCase.expectedOutput}
-                      </pre>
+                      {testCase.isCustom && onCustomTestCaseChange ? (
+                        <Textarea
+                          value={testCase.expectedOutput}
+                          onChange={(e) => onCustomTestCaseChange(testCase.id, "expectedOutput", e.target.value)}
+                          rows={3}
+                          placeholder="Optional for custom tests"
+                          className="font-mono"
+                        />
+                      ) : (
+                        <pre className="text-primary font-semibold bg-muted/30 p-2 rounded border border-border/50 whitespace-pre-wrap break-words text-sm font-mono">
+                          {testCase.expectedOutput}
+                        </pre>
+                      )}
                     </div>
+
+                    {testCase.isCustom && onCustomTestCaseRemove && (
+                      <div className="pt-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onCustomTestCaseRemove(testCase.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Remove Custom Test
+                        </Button>
+                      </div>
+                    )}
 
                     {testCase.actualOutput && (
                       <div>

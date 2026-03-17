@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Calendar,
   BarChart3,
+  FilePlus2,
   AlertTriangle,
   Settings,
   HelpCircle,
@@ -86,6 +87,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             url: "/users",
             icon: Users,
           },
+          ...(user?.role === "ADMIN"
+            ? [
+                {
+                  title: "Create Problem",
+                  url: "/admin/create-problem",
+                  icon: FilePlus2,
+                },
+              ]
+            : []),
         ],
       },
       {
