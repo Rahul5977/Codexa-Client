@@ -4,6 +4,9 @@ import { useProblem } from "@/hooks/api/use-problems"
 import { useCodeExecution, useCodeSubmission, useSubmission } from "@/hooks/api/use-submissions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ProblemStatement } from "./components/problem-statement"
 import { CodeEditor } from "./components/code-editor"
 import { TestCases } from "./components/test-cases"
@@ -16,6 +19,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 import { assignmentService } from "@/api/services/assignment"
 import { getProblemTestCases, type TestCase } from "@/api/services/problem"
+import { generateCustomAIAnalysis, type AIAnalysisReport } from "@/api/services/ai-analytics"
 
 // Map Judge0 language IDs to code stub keys
 const LANGUAGE_ID_TO_STUB_KEY: Record<number, string> = {
@@ -57,6 +61,10 @@ export default function CodePage() {
   const [viewingStudentName, setViewingStudentName] = useState<string | null>(null)
   const [teacherTestCases, setTeacherTestCases] = useState<{ testcases: TestCase[]; hiddenTestcases: TestCase[] } | null>(null)
   const [customTestCases, setCustomTestCases] = useState<Array<{ id: string; input: string; expectedOutput: string }>>([])
+  const [enableTeacherAI, setEnableTeacherAI] = useState(false)
+  const [teacherAIReport, setTeacherAIReport] = useState<AIAnalysisReport | null>(null)
+  const [teacherAIError, setTeacherAIError] = useState<string | null>(null)
+  const [teacherAILoading, setTeacherAILoading] = useState(false)
 
   // State for code and language (persists across tab switches)
   const [code, setCode] = useState("")
@@ -328,18 +336,62 @@ export default function CodePage() {
 
     // Clear previous submission results to show fresh run results
     clearSubmission()
+    setTeacherAIReport(null)
+    setTeacherAIError(null)
 
     setActiveTab("testcases")
     toast.info(`Running code against ${allTestCases.length} test case(s) (${teacherTestCases.testcases.length} visible + ${teacherTestCases.hiddenTestcases.length} hidden)...`)
 
     try {
-      await runCodeMultiple(allTestCases, code, languageId, problemId || '')
+      const results = await runCodeMultiple(allTestCases, code, languageId, problemId || '')
+
+      if (enableTeacherAI) {
+        setTeacherAILoading(true)
+        toast.info("Generating AI efficiency report...")
+
+        const languageKey = LANGUAGE_ID_TO_STUB_KEY[languageId] || "python"
+        const avgExecutionTimeMs = results.length
+          ? results.reduce((sum, item) => sum + (item.time ? parseFloat(item.time) * 1000 : 0), 0) / results.length
+          : 0
+        const peakMemoryKb = results.reduce((max, item) => Math.max(max, item.memory || 0), 0)
+
+        const hasExecutionError = results.some((item) => !!item.stderr || !!item.compile_output)
+        const hasWrongAnswer = results.some((item, index) => {
+          const expected = allTestCases[index]?.expectedOutput?.trim() || ""
+          if (!expected) return false
+          return (item.stdout || "").trim() !== expected
+        })
+
+        const derivedStatus = hasExecutionError
+          ? "ERROR"
+          : hasWrongAnswer
+            ? "WRONG_ANSWER"
+            : "ACCEPTED"
+
+        const report = await generateCustomAIAnalysis({
+          code,
+          language: languageKey,
+          status: derivedStatus,
+          executionTimeMs: Number(avgExecutionTimeMs.toFixed(2)),
+          memoryKb: peakMemoryKb,
+          problemTitle: problem?.title,
+          difficulty: String(problem?.difficulty || ""),
+        })
+
+        setTeacherAIReport(report)
+      }
+
       toast.success("Code execution completed!")
     } catch (error) {
       console.error("Run error:", error)
+      if (enableTeacherAI) {
+        setTeacherAIError(error instanceof Error ? error.message : "Failed to generate AI report")
+      }
       toast.error("Failed to run code. Please try again.")
+    } finally {
+      setTeacherAILoading(false)
     }
-  }, [code, languageId, runCodeMultiple, setActiveTab, teacherTestCases, problemId, clearSubmission])
+  }, [code, languageId, runCodeMultiple, setActiveTab, teacherTestCases, problemId, clearSubmission, enableTeacherAI, problem?.title, problem?.difficulty])
 
   const handleSubmit = useCallback(async () => {
     if (!user) {
@@ -596,6 +648,19 @@ export default function CodePage() {
 
                       {/* Action Buttons */}
                       <div className="flex items-center gap-2">
+                        {studentId && (
+                          <div className="hidden md:flex items-center gap-2 mr-2">
+                            <Switch
+                              id="teacher-ai-toggle"
+                              checked={enableTeacherAI}
+                              onCheckedChange={setEnableTeacherAI}
+                            />
+                            <Label htmlFor="teacher-ai-toggle" className="text-xs text-muted-foreground">
+                              AI Report
+                            </Label>
+                          </div>
+                        )}
+
                         <Button
                           size="sm"
                           variant="outline"
@@ -779,17 +844,48 @@ export default function CodePage() {
                   </TabsContent>
 
                   <TabsContent value="testcases" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
-                    <TestCases
-                      problem={problem}
-                      loading={problemLoading}
-                      runResults={runResults}
-                      submission={submission}
-                      isRunning={isRunning}
-                      teacherTestCases={teacherTestCases}
-                      customTestCases={customTestCases}
-                      onCustomTestCaseChange={handleCustomTestCaseChange}
-                      onCustomTestCaseRemove={handleCustomTestCaseRemove}
-                    />
+                    <div className="h-full flex flex-col">
+                      {studentId && enableTeacherAI && (teacherAILoading || teacherAIReport || teacherAIError) && (
+                        <div className="border-b border-border/50 p-4 bg-muted/10 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold">AI Efficiency Report</h3>
+                            {teacherAILoading && <span className="text-xs text-muted-foreground">Generating...</span>}
+                          </div>
+
+                          {teacherAIError && (
+                            <p className="text-xs text-red-500">{teacherAIError}</p>
+                          )}
+
+                          {teacherAIReport && (
+                            <Card>
+                              <CardHeader className="pb-2">
+                                <CardTitle className="text-sm">{teacherAIReport.summary || "AI Analysis"}</CardTitle>
+                              </CardHeader>
+                              <CardContent className="space-y-2 text-xs">
+                                <p><strong>Time Complexity:</strong> {teacherAIReport.timeComplexity}</p>
+                                <p><strong>Space Complexity:</strong> {teacherAIReport.spaceComplexity}</p>
+                                <p><strong>Runtime:</strong> {teacherAIReport.executionTimeMs.toFixed(2)}ms</p>
+                                <p><strong>Memory:</strong> {(teacherAIReport.memoryKb / 1024).toFixed(2)}MB</p>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-h-0">
+                        <TestCases
+                          problem={problem}
+                          loading={problemLoading}
+                          runResults={runResults}
+                          submission={submission}
+                          isRunning={isRunning}
+                          teacherTestCases={teacherTestCases}
+                          customTestCases={customTestCases}
+                          onCustomTestCaseChange={handleCustomTestCaseChange}
+                          onCustomTestCaseRemove={handleCustomTestCaseRemove}
+                        />
+                      </div>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="submission-details" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
