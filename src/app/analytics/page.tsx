@@ -39,27 +39,30 @@ const lineChartConfig = {
   },
 } satisfies ChartConfig
 
-const tagColors = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "#14b8a6",
-  "#f59e0b",
-  "#f97316",
-]
+const getTagColor = (tag: string) => {
+  // Stable per-tag hash so each tag keeps its color across renders/periods.
+  let hash = 0
+  for (let i = 0; i < tag.length; i += 1) {
+    hash = (hash << 5) - hash + tag.charCodeAt(i)
+    hash |= 0
+  }
+
+  const hue = Math.abs(hash) % 360
+  const saturation = 62 + (Math.abs(hash) % 14)
+  const lightness = 42 + (Math.abs(hash) % 10)
+  return `hsl(${hue} ${saturation}% ${lightness}%)`
+}
 
 const difficultyColorMap: Record<string, string> = {
-  Easy: "var(--chart-1)",
-  Medium: "var(--chart-4)",
-  Hard: "var(--chart-5)",
+  Easy: "#22c55e",
+  Medium: "#eab308",
+  Hard: "#ef4444",
 }
 
 const difficultyChartConfig = {
-  easy: { label: "Easy", color: "var(--chart-1)" },
-  medium: { label: "Medium", color: "var(--chart-4)" },
-  hard: { label: "Hard", color: "var(--chart-5)" },
+  easy: { label: "Easy", color: "#22c55e" },
+  medium: { label: "Medium", color: "#eab308" },
+  hard: { label: "Hard", color: "#ef4444" },
 } satisfies ChartConfig
 
 export default function AnalyticsPage() {
@@ -70,7 +73,6 @@ export default function AnalyticsPage() {
   >({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTag, setActiveTag] = useState<string>("")
   const [activeDifficulty, setActiveDifficulty] = useState<string>("")
 
   const fetchPeriodData = async (period: AnalyticsPeriod) => {
@@ -96,11 +98,16 @@ export default function AnalyticsPage() {
 
   const tagPieData = useMemo(
     () =>
-      (currentData?.byTag || []).map((item, index) => ({
+      (currentData?.byTag || []).map((item) => ({
         ...item,
-        fill: tagColors[index % tagColors.length],
+        fill: getTagColor(item.tag),
       })),
     [currentData]
+  )
+
+  const totalTagSolved = useMemo(
+    () => tagPieData.reduce((sum, item) => sum + item.solved, 0),
+    [tagPieData]
   )
 
   const difficultyPieData = useMemo(
@@ -113,12 +120,6 @@ export default function AnalyticsPage() {
   )
 
   useEffect(() => {
-    if (tagPieData.length > 0 && !tagPieData.some((item) => item.tag === activeTag)) {
-      setActiveTag(tagPieData[0].tag)
-    }
-  }, [tagPieData, activeTag])
-
-  useEffect(() => {
     if (
       difficultyPieData.length > 0 &&
       !difficultyPieData.some((item) => item.difficulty === activeDifficulty)
@@ -126,11 +127,6 @@ export default function AnalyticsPage() {
       setActiveDifficulty(difficultyPieData[0].difficulty)
     }
   }, [difficultyPieData, activeDifficulty])
-
-  const activeTagIndex = useMemo(
-    () => tagPieData.findIndex((item) => item.tag === activeTag),
-    [tagPieData, activeTag]
-  )
 
   const activeDifficultyIndex = useMemo(
     () => difficultyPieData.findIndex((item) => item.difficulty === activeDifficulty),
@@ -280,18 +276,18 @@ export default function AnalyticsPage() {
                     <ChartStyle
                       id="tags-breakdown"
                       config={Object.fromEntries(
-                        tagPieData.map((item, index) => [
+                        tagPieData.map((item) => [
                           item.tag,
                           {
                             label: item.tag,
-                            color: tagColors[index % tagColors.length],
+                            color: item.fill,
                           },
                         ])
                       ) satisfies ChartConfig}
                     />
                     <CardHeader>
                       <CardTitle>Solved by Tag</CardTitle>
-                      <CardDescription>Top tags in the selected timeframe</CardDescription>
+                      <CardDescription>Color-coded by tag (hover chart for details)</CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-1 justify-center">
                       {tagPieData.length === 0 ? (
@@ -299,94 +295,83 @@ export default function AnalyticsPage() {
                           No tag data available in this period.
                         </div>
                       ) : (
-                        <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-2">
-                          <div className="flex justify-center">
-                            <ChartContainer
-                              id="tags-breakdown"
-                              config={Object.fromEntries(
-                                tagPieData.map((item, index) => [
-                                  item.tag,
-                                  {
-                                    label: item.tag,
-                                    color: tagColors[index % tagColors.length],
-                                  },
-                                ])
-                              ) satisfies ChartConfig}
-                              className="mx-auto aspect-square w-full max-w-[300px]"
-                            >
-                              <PieChart>
-                                <ChartTooltip
-                                  cursor={false}
-                                  content={<ChartTooltipContent hideLabel nameKey="tag" />}
-                                />
-                                <Pie
-                                  data={tagPieData}
-                                  dataKey="solved"
-                                  nameKey="tag"
-                                  innerRadius={60}
-                                  strokeWidth={5}
-                                >
-                                  <Label
-                                    content={({ viewBox }) => {
-                                      const activeItem = tagPieData[activeTagIndex] || tagPieData[0]
-                                      if (viewBox && "cx" in viewBox && "cy" in viewBox && activeItem) {
-                                        return (
-                                          <text
+                        <div className="flex w-full flex-col items-center gap-4">
+                          <ChartContainer
+                            id="tags-breakdown"
+                            config={Object.fromEntries(
+                              tagPieData.map((item) => [
+                                item.tag,
+                                {
+                                  label: item.tag,
+                                  color: item.fill,
+                                },
+                              ])
+                            ) satisfies ChartConfig}
+                            className="mx-auto aspect-square w-full max-w-[320px]"
+                          >
+                            <PieChart>
+                              <ChartTooltip
+                                cursor={false}
+                                content={<ChartTooltipContent hideLabel nameKey="tag" />}
+                              />
+                              <Pie
+                                data={tagPieData}
+                                dataKey="solved"
+                                nameKey="tag"
+                                innerRadius={62}
+                                strokeWidth={4}
+                              >
+                                <Label
+                                  content={({ viewBox }) => {
+                                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                      return (
+                                        <text
+                                          x={viewBox.cx}
+                                          y={viewBox.cy}
+                                          textAnchor="middle"
+                                          dominantBaseline="middle"
+                                        >
+                                          <tspan
                                             x={viewBox.cx}
                                             y={viewBox.cy}
-                                            textAnchor="middle"
-                                            dominantBaseline="middle"
+                                            className="fill-foreground text-3xl font-bold"
                                           >
-                                            <tspan
-                                              x={viewBox.cx}
-                                              y={viewBox.cy}
-                                              className="fill-foreground text-3xl font-bold"
-                                            >
-                                              {activeItem.solved}
-                                            </tspan>
-                                            <tspan
-                                              x={viewBox.cx}
-                                              y={(viewBox.cy || 0) + 24}
-                                              className="fill-muted-foreground"
-                                            >
-                                              {activeItem.tag}
-                                            </tspan>
-                                          </text>
-                                        )
-                                      }
-                                    }}
-                                  />
-                                </Pie>
-                              </PieChart>
-                            </ChartContainer>
-                          </div>
+                                            {totalTagSolved}
+                                          </tspan>
+                                          <tspan
+                                            x={viewBox.cx}
+                                            y={(viewBox.cy || 0) + 24}
+                                            className="fill-muted-foreground"
+                                          >
+                                            Total tagged solves
+                                          </tspan>
+                                        </text>
+                                      )
+                                    }
+                                  }}
+                                />
+                              </Pie>
+                            </PieChart>
+                          </ChartContainer>
 
-                          <div className="flex flex-col justify-center space-y-4">
-                            {tagPieData.map((item, index) => {
-                              const isActive = index === activeTagIndex
-
-                              return (
-                                <div
-                                  key={item.tag}
-                                  className={`flex cursor-pointer items-center justify-between rounded-lg p-3 transition-colors ${
-                                    isActive ? "bg-muted" : "hover:bg-muted/50"
-                                  }`}
-                                  onClick={() => setActiveTag(item.tag)}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <span
-                                      className="flex h-3 w-3 shrink-0 rounded-full"
-                                      style={{ backgroundColor: item.fill }}
-                                    />
-                                    <span className="font-medium">{item.tag}</span>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="font-bold">{item.solved}</div>
-                                    <div className="text-sm text-muted-foreground">solved</div>
-                                  </div>
-                                </div>
-                              )
-                            })}
+                          <div className="flex w-full flex-wrap justify-center gap-2">
+                            {tagPieData.slice(0, 6).map((item) => (
+                              <span
+                                key={item.tag}
+                                className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs text-muted-foreground"
+                              >
+                                <span
+                                  className="h-2.5 w-2.5 rounded-full"
+                                  style={{ backgroundColor: item.fill }}
+                                />
+                                {item.tag}
+                              </span>
+                            ))}
+                            {tagPieData.length > 6 && (
+                              <span className="inline-flex items-center rounded-full border px-3 py-1 text-xs text-muted-foreground">
+                                +{tagPieData.length - 6} more
+                              </span>
+                            )}
                           </div>
                         </div>
                       )}
