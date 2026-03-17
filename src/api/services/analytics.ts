@@ -67,6 +67,7 @@ export interface ActivityHeatmap {
   summary: {
     totalActiveDays: number
     maxInDay: number
+    totalSolved?: number
     totalSubmissions: number
   }
 }
@@ -134,7 +135,10 @@ export const getUserAnalytics = async (userId: string): Promise<UserAnalytics> =
  * Get activity heatmap for a user
  */
 export const getActivityHeatmap = async (userId: string): Promise<ActivityHeatmap> => {
-  const response = await apiClient.get<ActivityHeatmap>(`${ANALYTICS_BASE_URL}/heatmap/${userId}`)
+  const tzOffsetMinutes = new Date().getTimezoneOffset()
+  const response = await apiClient.get<ActivityHeatmap>(`${ANALYTICS_BASE_URL}/heatmap/${userId}`, {
+    params: { tzOffsetMinutes }
+  })
   return response.data
 }
 
@@ -181,8 +185,9 @@ export const getTimeframeAnalytics = async (
   userId: string,
   period: AnalyticsPeriod
 ): Promise<TimeframeAnalytics> => {
+  const tzOffsetMinutes = new Date().getTimezoneOffset()
   const response = await apiClient.get<TimeframeAnalytics>(`${ANALYTICS_BASE_URL}/timeframe/${userId}`, {
-    params: { period }
+    params: { period, tzOffsetMinutes }
   })
   return response.data
 }

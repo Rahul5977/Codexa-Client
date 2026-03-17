@@ -37,7 +37,7 @@ export function CompactCalendar({ userId }: CompactCalendarProps) {
         setHeatmap({
           heatmap: {},
           streak: { current: 0, max: 0 },
-          summary: { totalActiveDays: 0, maxInDay: 0, totalSubmissions: 0 }
+          summary: { totalActiveDays: 0, maxInDay: 0, totalSolved: 0, totalSubmissions: 0 }
         })
       } finally {
         setLoading(false)

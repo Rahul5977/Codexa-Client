@@ -35,7 +35,7 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
         setHeatmap({
           heatmap: {},
           streak: { current: 0, max: 0 },
-          summary: { totalActiveDays: 0, maxInDay: 0, totalSubmissions: 0 }
+          summary: { totalActiveDays: 0, maxInDay: 0, totalSolved: 0, totalSubmissions: 0 }
         })
       } finally {
         setLoading(false)
@@ -256,9 +256,9 @@ export function ActivityHeatmap({ userId }: ActivityHeatmapProps) {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">
-                  {heatmap.summary.totalSubmissions}
+                  {heatmap.summary.totalSolved ?? heatmap.summary.totalSubmissions}
                 </div>
-                <div className="text-xs text-muted-foreground">Total Submissions</div>
+                <div className="text-xs text-muted-foreground">Total Solved</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary">
