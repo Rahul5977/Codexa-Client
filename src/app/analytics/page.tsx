@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Area, AreaChart, CartesianGrid, Label, Pie, PieChart, XAxis, YAxis } from "recharts"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { CartesianGrid, Label, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -9,6 +9,7 @@ import {
   type AnalyticsPeriod,
   type TimeframeAnalytics,
 } from "@/api/services/analytics"
+import { authService, type UsersListItem } from "@/api/services/auth"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Card,
@@ -25,6 +26,13 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { useToast } from "@/hooks/use-toast"
+import { Check, ChevronsUpDown } from "lucide-react"
 
 const timeframeLabels: Record<AnalyticsPeriod, string> = {
   weekly: "Current week (Mon-Sun)",
@@ -38,6 +46,22 @@ const lineChartConfig = {
     color: "var(--primary)",
   },
 } satisfies ChartConfig
+
+const comparePalette = [
+  "#0ea5e9",
+  "#22c55e",
+  "#eab308",
+  "#ef4444",
+  "#a855f7",
+  "#f97316",
+  "#14b8a6",
+  "#3b82f6",
+  "#ec4899",
+  "#84cc16",
+  "#f59e0b",
+]
+
+const getCompareColor = (index: number) => comparePalette[index % comparePalette.length]
 
 const getTagColor = (tag: string) => {
   // Stable per-tag hash so each tag keeps its color across renders/periods.
@@ -67,34 +91,233 @@ const difficultyChartConfig = {
 
 export default function AnalyticsPage() {
   const { user } = useAuth()
+  const { toast } = useToast()
+
   const [activePeriod, setActivePeriod] = useState<AnalyticsPeriod>("weekly")
-  const [analyticsByPeriod, setAnalyticsByPeriod] = useState<
-    Partial<Record<AnalyticsPeriod, TimeframeAnalytics>>
+  const [analyticsCache, setAnalyticsCache] = useState<
+    Record<string, Partial<Record<AnalyticsPeriod, TimeframeAnalytics>>>
   >({})
+  const analyticsCacheRef = useRef<
+    Record<string, Partial<Record<AnalyticsPeriod, TimeframeAnalytics>>>
+  >({})
+  const inFlightFetchesRef = useRef<Set<string>>(new Set())
+  const loadedFriendsForUserRef = useRef<string | null>(null)
+
+  const [friends, setFriends] = useState<UsersListItem[]>([])
+  const [friendDropdownOpen, setFriendDropdownOpen] = useState(false)
+  const [friendSearch, setFriendSearch] = useState("")
+  const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([])
+  const [compareFriendIds, setCompareFriendIds] = useState<string[]>([])
+
   const [loading, setLoading] = useState(false)
+  const [compareLoading, setCompareLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeDifficulty, setActiveDifficulty] = useState<string>("")
 
-  const fetchPeriodData = async (period: AnalyticsPeriod) => {
-    if (!user?.id || analyticsByPeriod[period]) return
+  useEffect(() => {
+    analyticsCacheRef.current = analyticsCache
+  }, [analyticsCache])
 
+  const ensureTimeframeForUser = useCallback(async (userId: string, period: AnalyticsPeriod) => {
+    const cache = analyticsCacheRef.current
+    if (cache[userId]?.[period]) return
+
+    const key = `${userId}:${period}`
+    if (inFlightFetchesRef.current.has(key)) return
+
+    inFlightFetchesRef.current.add(key)
     try {
-      setLoading(true)
-      setError(null)
-      const data = await getTimeframeAnalytics(user.id, period)
-      setAnalyticsByPeriod((prev) => ({ ...prev, [period]: data }))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load analytics")
+      const data = await getTimeframeAnalytics(userId, period)
+      setAnalyticsCache((prev) => {
+        if (prev[userId]?.[period]) return prev
+        return {
+          ...prev,
+          [userId]: {
+            ...(prev[userId] || {}),
+            [period]: data,
+          },
+        }
+      })
     } finally {
-      setLoading(false)
+      inFlightFetchesRef.current.delete(key)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    fetchPeriodData(activePeriod)
-  }, [activePeriod, user?.id])
+    if (!user?.id) return
 
-  const currentData = analyticsByPeriod[activePeriod]
+    let cancelled = false
+    const loadMyData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        await ensureTimeframeForUser(user.id, activePeriod)
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load analytics")
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadMyData()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePeriod, ensureTimeframeForUser, user?.id])
+
+  useEffect(() => {
+    if (!user?.id) return
+
+    if (loadedFriendsForUserRef.current === user.id) return
+
+    let cancelled = false
+    const loadFriends = async () => {
+      try {
+        const data = await authService.listUsers({ friend: "true" })
+        if (!cancelled) {
+          loadedFriendsForUserRef.current = user.id
+          const onlyFriends = data.filter((item) => item.isFriend && !item.isSelf)
+          setFriends(onlyFriends)
+          setSelectedFriendIds((prev) => prev.filter((id) => onlyFriends.some((f) => f.id === id)))
+          setCompareFriendIds((prev) => prev.filter((id) => onlyFriends.some((f) => f.id === id)))
+        }
+      } catch {
+        if (!cancelled) {
+          toast({
+            title: "Unable to load friends",
+            description: "Friend comparison is temporarily unavailable.",
+            variant: "destructive",
+          })
+        }
+      }
+    }
+
+    loadFriends()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user?.id || compareFriendIds.length === 0) return
+
+    let cancelled = false
+    const loadComparePeriod = async () => {
+      try {
+        setCompareLoading(true)
+        setError(null)
+        const ids = [user.id, ...compareFriendIds]
+        await Promise.all(ids.map((id) => ensureTimeframeForUser(id, activePeriod)))
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Failed to load comparison analytics")
+        }
+      } finally {
+        if (!cancelled) {
+          setCompareLoading(false)
+        }
+      }
+    }
+
+    loadComparePeriod()
+
+    return () => {
+      cancelled = true
+    }
+  }, [activePeriod, compareFriendIds, ensureTimeframeForUser, user?.id])
+
+  const currentData = user?.id ? analyticsCache[user.id]?.[activePeriod] : undefined
+
+  const selectedFriendNames = useMemo(
+    () => friends.filter((f) => selectedFriendIds.includes(f.id)).map((f) => f.name),
+    [friends, selectedFriendIds]
+  )
+
+  const compareUsers = useMemo(() => {
+    if (!user?.id) return []
+
+    const ids = [user.id, ...compareFriendIds]
+    return ids.map((id, index) => {
+      const isMe = id === user.id
+      const friend = friends.find((f) => f.id === id)
+      return {
+        id,
+        name: isMe ? "You" : friend?.name || "Friend",
+        color: getCompareColor(index),
+        data: analyticsCache[id]?.[activePeriod],
+      }
+    })
+  }, [activePeriod, analyticsCache, compareFriendIds, friends, user?.id])
+
+  const isCompareMode = compareFriendIds.length > 0
+
+  const lineChartData = useMemo(() => {
+    if (!isCompareMode) {
+      return currentData?.solvedOverTime || []
+    }
+
+    const base = compareUsers.find((item) => item.data)?.data
+    if (!base) return []
+
+    return base.solvedOverTime.map((bucket, index) => {
+      const row: Record<string, string | number> = {
+        key: bucket.key,
+        label: bucket.label,
+      }
+
+      compareUsers.forEach((series) => {
+        row[series.id] = series.data?.solvedOverTime[index]?.solved || 0
+      })
+
+      return row
+    })
+  }, [compareUsers, currentData, isCompareMode])
+
+  const handleFriendToggle = (friendId: string) => {
+    setSelectedFriendIds((prev) => {
+      if (prev.includes(friendId)) {
+        return prev.filter((id) => id !== friendId)
+      }
+
+      if (prev.length >= 10) {
+        toast({
+          title: "Selection limit reached",
+          description: "You can compare with at most 10 friends at once.",
+          variant: "destructive",
+        })
+        return prev
+      }
+
+      return [...prev, friendId]
+    })
+  }
+
+  const handleCompare = async () => {
+    if (!user?.id) return
+
+    setCompareFriendIds(selectedFriendIds)
+  }
+
+  const clearComparison = () => {
+    setSelectedFriendIds([])
+    setCompareFriendIds([])
+  }
+
+  const filteredFriends = useMemo(() => {
+    const query = friendSearch.trim().toLowerCase()
+    if (!query) return friends
+    return friends.filter(
+      (friend) =>
+        friend.name.toLowerCase().includes(query) ||
+        friend.email.toLowerCase().includes(query)
+    )
+  }, [friendSearch, friends])
 
   const tagPieData = useMemo(
     () =>
@@ -133,6 +356,18 @@ export default function AnalyticsPage() {
     [difficultyPieData, activeDifficulty]
   )
 
+  const getTagPieData = (data?: TimeframeAnalytics) =>
+    (data?.byTag || []).map((item) => ({
+      ...item,
+      fill: getTagColor(item.tag),
+    }))
+
+  const getDifficultyPieData = (data?: TimeframeAnalytics) =>
+    (data?.byDifficulty || []).map((item) => ({
+      ...item,
+      fill: difficultyColorMap[item.difficulty] || "#94a3b8",
+    }))
+
   return (
     <BaseLayout
       title="Analytics"
@@ -163,6 +398,94 @@ export default function AnalyticsPage() {
                 <TabsTrigger value="yearly">Yearly</TabsTrigger>
               </TabsList>
             </Tabs>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle>Compare With Friends</CardTitle>
+                <CardDescription>
+                  Select up to 10 friends, then compare trends and distribution charts.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Popover open={friendDropdownOpen} onOpenChange={setFriendDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between sm:w-[320px]">
+                        <span className="truncate text-left">
+                          {selectedFriendIds.length > 0
+                            ? `${selectedFriendIds.length} friend${selectedFriendIds.length > 1 ? "s" : ""} selected`
+                            : "Select friends"}
+                        </span>
+                        <ChevronsUpDown className="size-4 opacity-60" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[340px] p-3" align="start">
+                      <div className="space-y-2">
+                        <Input
+                          placeholder="Search friends..."
+                          value={friendSearch}
+                          onChange={(event) => setFriendSearch(event.target.value)}
+                        />
+                        <div className="max-h-64 space-y-1 overflow-y-auto">
+                          {filteredFriends.length === 0 ? (
+                            <p className="py-2 text-sm text-muted-foreground">No friends found.</p>
+                          ) : (
+                            filteredFriends.map((friend) => {
+                              const checked = selectedFriendIds.includes(friend.id)
+                              const disabled = !checked && selectedFriendIds.length >= 10
+
+                              return (
+                                <button
+                                  key={friend.id}
+                                  type="button"
+                                  className="flex w-full items-center justify-between rounded-md px-2 py-2 text-left hover:bg-muted"
+                                  onClick={() => handleFriendToggle(friend.id)}
+                                  disabled={disabled}
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium">{friend.name}</p>
+                                    <p className="truncate text-xs text-muted-foreground">{friend.email}</p>
+                                  </div>
+                                  <Checkbox checked={checked} className="ml-2" />
+                                </button>
+                              )
+                            })
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedFriendIds.length}/10 selected
+                        </p>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+
+                  <Button
+                    onClick={handleCompare}
+                    disabled={compareLoading || loading || !user?.id}
+                    className="sm:w-auto"
+                  >
+                    {compareLoading ? "Comparing..." : "Compare"}
+                  </Button>
+
+                  {isCompareMode && (
+                    <Button variant="ghost" onClick={clearComparison} className="sm:w-auto">
+                      Clear
+                    </Button>
+                  )}
+                </div>
+
+                {selectedFriendNames.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedFriendNames.map((name) => (
+                      <Badge key={name} variant="outline" className="gap-1">
+                        <Check className="size-3" />
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {loading && !currentData && (
               <div className="space-y-4">
@@ -230,13 +553,7 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent>
                     <ChartContainer config={lineChartConfig} className="aspect-auto h-90 w-full">
-                      <AreaChart data={currentData.solvedOverTime} margin={{ top: 10, left: 12, right: 12, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="analyticsSolvedFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="var(--color-solved)" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="var(--color-solved)" stopOpacity={0.05} />
-                          </linearGradient>
-                        </defs>
+                      <LineChart data={lineChartData} margin={{ top: 10, left: 12, right: 12, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted/30" />
                         <XAxis
                           dataKey="label"
@@ -259,15 +576,48 @@ export default function AnalyticsPage() {
                           cursor={false}
                           content={<ChartTooltipContent indicator="dot" />}
                         />
-                        <Area
-                          dataKey="solved"
-                          type="monotone"
-                          stroke="var(--color-solved)"
-                          fill="url(#analyticsSolvedFill)"
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
+                        {!isCompareMode && (
+                          <Line
+                            dataKey="solved"
+                            type="monotone"
+                            stroke="var(--color-solved)"
+                            strokeWidth={3}
+                            dot={false}
+                            activeDot={{ r: 4 }}
+                          />
+                        )}
+                        {isCompareMode &&
+                          compareUsers.map((series) => (
+                            <Line
+                              key={series.id}
+                              dataKey={series.id}
+                              name={series.name}
+                              type="monotone"
+                              stroke={series.color}
+                              strokeWidth={2.5}
+                              dot={false}
+                              activeDot={{ r: 4 }}
+                              connectNulls
+                            />
+                          ))}
+                      </LineChart>
                     </ChartContainer>
+                    {isCompareMode && (
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        {compareUsers.map((series) => (
+                          <span
+                            key={series.id}
+                            className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+                          >
+                            <span
+                              className="inline-block h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: series.color }}
+                            />
+                            {series.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -286,15 +636,21 @@ export default function AnalyticsPage() {
                       ) satisfies ChartConfig}
                     />
                     <CardHeader>
-                      <CardTitle>Solved by Tag</CardTitle>
-                      <CardDescription>Color-coded by tag (hover chart for details)</CardDescription>
+                      <CardTitle>
+                        {isCompareMode ? "Solved by Tag (Comparison)" : "Solved by Tag"}
+                      </CardTitle>
+                      <CardDescription>
+                        {isCompareMode
+                          ? "One pie per selected user"
+                          : "Color-coded by tag (hover chart for details)"}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-1 justify-center">
-                      {tagPieData.length === 0 ? (
+                      {!isCompareMode && tagPieData.length === 0 ? (
                         <div className="flex h-70 items-center justify-center text-sm text-muted-foreground">
                           No tag data available in this period.
                         </div>
-                      ) : (
+                      ) : !isCompareMode ? (
                         <div className="flex w-full flex-col items-center gap-4">
                           <ChartContainer
                             id="tags-breakdown"
@@ -374,6 +730,69 @@ export default function AnalyticsPage() {
                             )}
                           </div>
                         </div>
+                      ) : (
+                        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+                          {compareUsers.map((series) => {
+                            const pieData = getTagPieData(series.data)
+                            const total = pieData.reduce((sum, item) => sum + item.solved, 0)
+
+                            return (
+                              <div key={series.id} className="rounded-lg border p-3">
+                                <p className="mb-2 text-sm font-semibold">{series.name}</p>
+                                {pieData.length === 0 ? (
+                                  <div className="flex h-48 items-center justify-center text-xs text-muted-foreground">
+                                    No tag data
+                                  </div>
+                                ) : (
+                                  <ChartContainer
+                                    id={`tags-breakdown-${series.id}`}
+                                    config={Object.fromEntries(
+                                      pieData.map((item) => [
+                                        item.tag,
+                                        {
+                                          label: item.tag,
+                                          color: item.fill,
+                                        },
+                                      ])
+                                    ) satisfies ChartConfig}
+                                    className="mx-auto aspect-square w-full max-w-[230px]"
+                                  >
+                                    <PieChart>
+                                      <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent hideLabel nameKey="tag" />}
+                                      />
+                                      <Pie data={pieData} dataKey="solved" nameKey="tag" innerRadius={44} strokeWidth={3}>
+                                        <Label
+                                          content={({ viewBox }) => {
+                                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                              return (
+                                                <text
+                                                  x={viewBox.cx}
+                                                  y={viewBox.cy}
+                                                  textAnchor="middle"
+                                                  dominantBaseline="middle"
+                                                >
+                                                  <tspan
+                                                    x={viewBox.cx}
+                                                    y={viewBox.cy}
+                                                    className="fill-foreground text-xl font-bold"
+                                                  >
+                                                    {total}
+                                                  </tspan>
+                                                </text>
+                                              )
+                                            }
+                                          }}
+                                        />
+                                      </Pie>
+                                    </PieChart>
+                                  </ChartContainer>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
                       )}
                     </CardContent>
                   </Card>
@@ -381,15 +800,19 @@ export default function AnalyticsPage() {
                   <Card data-chart="difficulty-breakdown" className="flex flex-col">
                     <ChartStyle id="difficulty-breakdown" config={difficultyChartConfig} />
                     <CardHeader>
-                      <CardTitle>Solved by Difficulty</CardTitle>
-                      <CardDescription>Easy, Medium, Hard split</CardDescription>
+                      <CardTitle>
+                        {isCompareMode ? "Solved by Difficulty (Comparison)" : "Solved by Difficulty"}
+                      </CardTitle>
+                      <CardDescription>
+                        {isCompareMode ? "One pie per selected user" : "Easy, Medium, Hard split"}
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="flex flex-1 justify-center">
-                      {difficultyPieData.every((item) => item.solved === 0) ? (
+                      {!isCompareMode && difficultyPieData.every((item) => item.solved === 0) ? (
                         <div className="flex h-70 items-center justify-center text-sm text-muted-foreground">
                           No solved problems in this period.
                         </div>
-                      ) : (
+                      ) : !isCompareMode ? (
                         <div className="grid w-full grid-cols-1 gap-6 xl:grid-cols-2">
                           <div className="flex justify-center">
                             <ChartContainer
@@ -472,6 +895,81 @@ export default function AnalyticsPage() {
                               )
                             })}
                           </div>
+                        </div>
+                      ) : (
+                        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
+                          {compareUsers.map((series) => {
+                            const pieData = getDifficultyPieData(series.data)
+                            const total = pieData.reduce((sum, item) => sum + item.solved, 0)
+
+                            return (
+                              <div key={series.id} className="rounded-lg border p-3">
+                                <p className="mb-2 text-sm font-semibold">{series.name}</p>
+                                {total === 0 ? (
+                                  <div className="flex h-48 items-center justify-center text-xs text-muted-foreground">
+                                    No solved problems
+                                  </div>
+                                ) : (
+                                  <>
+                                    <ChartContainer
+                                      id={`difficulty-breakdown-${series.id}`}
+                                      config={difficultyChartConfig}
+                                      className="mx-auto aspect-square w-full max-w-[230px]"
+                                    >
+                                      <PieChart>
+                                        <ChartTooltip
+                                          cursor={false}
+                                          content={<ChartTooltipContent hideLabel nameKey="difficulty" />}
+                                        />
+                                        <Pie
+                                          data={pieData}
+                                          dataKey="solved"
+                                          nameKey="difficulty"
+                                          innerRadius={44}
+                                          strokeWidth={3}
+                                        >
+                                          <Label
+                                            content={({ viewBox }) => {
+                                              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                                return (
+                                                  <text
+                                                    x={viewBox.cx}
+                                                    y={viewBox.cy}
+                                                    textAnchor="middle"
+                                                    dominantBaseline="middle"
+                                                  >
+                                                    <tspan
+                                                      x={viewBox.cx}
+                                                      y={viewBox.cy}
+                                                      className="fill-foreground text-xl font-bold"
+                                                    >
+                                                      {total}
+                                                    </tspan>
+                                                  </text>
+                                                )
+                                              }
+                                            }}
+                                          />
+                                        </Pie>
+                                      </PieChart>
+                                    </ChartContainer>
+
+                                    <div className="mt-2 grid grid-cols-3 gap-2">
+                                      {pieData.map((item) => (
+                                        <div
+                                          key={`${series.id}-${item.difficulty}`}
+                                          className="rounded-md border p-2 text-center"
+                                        >
+                                          <p className="text-xs text-muted-foreground">{item.difficulty}</p>
+                                          <p className="text-sm font-semibold">{item.solved}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
                       )}
                     </CardContent>
