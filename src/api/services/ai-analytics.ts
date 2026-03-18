@@ -1,6 +1,6 @@
 import { apiClient } from '../client'
 const ANALYTICS_BASE_URL =
-  import.meta.env.VITE_AI_ANALYTICS_SERVICE_URL || 'http://localhost:3005/api/analytics'
+  import.meta.env.VITE_AI_ANALYTICS_SERVICE_URL || 'http://localhost:8006/api/analytics'
 
 // ------------------------------------------------------------------
 // Types
