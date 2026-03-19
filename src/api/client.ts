@@ -1,5 +1,8 @@
-import { API_CONFIG, type HttpMethod } from './config'
+import { API_CONFIG, ENDPOINTS, type HttpMethod } from './config'
 import type { ApiResponse, RequestOptions } from './types/common'
+
+const rawAuthBase = API_CONFIG.AUTH_SERVICE_URL.replace(/\/$/, '')
+const authApiBase = rawAuthBase.endsWith('/auth') ? rawAuthBase : `${rawAuthBase}/auth`
 
 class ApiClient {
   private baseURL: string
@@ -43,7 +46,7 @@ class ApiClient {
 
     try {
       // Make refresh token request WITHOUT using this.request to avoid infinite loop
-      const response = await fetch(`${API_CONFIG.AUTH_SERVICE_URL}/auth/refresh`, {
+      const response = await fetch(`${authApiBase}${ENDPOINTS.AUTH.REFRESH}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

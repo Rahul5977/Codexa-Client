@@ -1,6 +1,9 @@
 import { apiClient } from "../client"
 import { API_CONFIG, ENDPOINTS } from "../config"
 
+const rawAuthBase = API_CONFIG.AUTH_SERVICE_URL.replace(/\/$/, "")
+const authApiBase = rawAuthBase.endsWith("/auth") ? rawAuthBase : `${rawAuthBase}/auth`
+
 // Types for authentication
 export interface User {
   id: string
@@ -100,7 +103,7 @@ export const authService = {
    */
   sendVerificationOTP: async (email: string): Promise<SendOTPResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<SendOTPResponse>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.SEND_VERIFICATION_OTP}`,
+      `${authApiBase}${ENDPOINTS.AUTH.SEND_VERIFICATION_OTP}`,
       { email }
     )
     return (response as any).data
@@ -117,7 +120,7 @@ export const authService = {
     role?: "USER" | "STUDENT" | "TEACHER"
   }): Promise<RegisterResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<RegisterResponse>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.COMPLETE_REGISTRATION}`,
+      `${authApiBase}${ENDPOINTS.AUTH.COMPLETE_REGISTRATION}`,
       data
     )
     return (response as any).data
@@ -128,7 +131,7 @@ export const authService = {
    */
   login: async (email: string, password: string): Promise<LoginResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<LoginResponse>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.LOGIN}`,
+      `${authApiBase}${ENDPOINTS.AUTH.LOGIN}`,
       { email, password }
     )
     return (response as any).data
@@ -139,7 +142,7 @@ export const authService = {
    */
   logout: async (): Promise<void> => {
     await apiClient.post(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.LOGOUT}`
+      `${authApiBase}${ENDPOINTS.AUTH.LOGOUT}`
     )
   },
 
@@ -148,7 +151,7 @@ export const authService = {
    */
   me: async (): Promise<User> => {
     const response = await apiClient.get<ApiResponseWrapper<{ user: User }>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.ME}`
+      `${authApiBase}${ENDPOINTS.AUTH.ME}`
     )
     return (response as any).data.user
   },
@@ -161,7 +164,7 @@ export const authService = {
   ): Promise<{ accessToken: string }> => {
     const response = await apiClient.post<
       ApiResponseWrapper<{ accessToken: string }>
-    >(`${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.REFRESH}`, {
+    >(`${authApiBase}${ENDPOINTS.AUTH.REFRESH}`, {
       refreshToken,
     })
     return (response as any).data
@@ -175,7 +178,7 @@ export const authService = {
     type: "VERIFY_EMAIL" | "RESET_PASSWORD" = "VERIFY_EMAIL"
   ): Promise<SendOTPResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<SendOTPResponse>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.REQUEST_OTP}`,
+      `${authApiBase}${ENDPOINTS.AUTH.REQUEST_OTP}`,
       { email, type }
     )
     return (response as any).data
@@ -187,7 +190,7 @@ export const authService = {
   verifyOTP: async (email: string, otp: string): Promise<VerifyOTPResponse> => {
     const response = await apiClient.post<
       ApiResponseWrapper<VerifyOTPResponse>
-    >(`${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.VERIFY_OTP}`, {
+    >(`${authApiBase}${ENDPOINTS.AUTH.VERIFY_OTP}`, {
       email,
       otp,
     })
@@ -199,7 +202,7 @@ export const authService = {
    */
   forgotPassword: async (email: string): Promise<SendOTPResponse> => {
     const response = await apiClient.post<ApiResponseWrapper<SendOTPResponse>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.FORGOT_PASSWORD}`,
+      `${authApiBase}${ENDPOINTS.AUTH.FORGOT_PASSWORD}`,
       { email }
     )
     return (response as any).data
@@ -214,7 +217,7 @@ export const authService = {
     confirmPassword: string
   ): Promise<void> => {
     await apiClient.post(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.RESET_PASSWORD(token)}`,
+      `${authApiBase}${ENDPOINTS.AUTH.RESET_PASSWORD(token)}`,
       { password, confirmPassword }
     )
   },
@@ -227,7 +230,7 @@ export const authService = {
     bio?: string
   }): Promise<User> => {
     const response = await apiClient.put<ApiResponseWrapper<{ user: User }>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.UPDATE_PROFILE}`,
+      `${authApiBase}${ENDPOINTS.AUTH.UPDATE_PROFILE}`,
       data
     )
     return (response as any).data.user
@@ -241,7 +244,7 @@ export const authService = {
     formData.append("file", file)
 
     const response = await apiClient.put<ApiResponseWrapper<{ user: User }>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}${ENDPOINTS.AUTH.UPDATE_PROFILE_PICTURE}`,
+      `${authApiBase}${ENDPOINTS.AUTH.UPDATE_PROFILE_PICTURE}`,
       formData
     )
     return (response as any).data.user
@@ -261,7 +264,7 @@ export const authService = {
 
     const query = params.toString()
     const response = await apiClient.get<ApiResponseWrapper<UsersListItem[]>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}/users${query ? `?${query}` : ""}`
+      `${authApiBase}/users${query ? `?${query}` : ""}`
     )
     return (response as any).data
   },
@@ -271,7 +274,7 @@ export const authService = {
    */
   getPublicUserProfile: async (userId: string): Promise<PublicUserProfile> => {
     const response = await apiClient.get<ApiResponseWrapper<PublicUserProfile>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}/users/${userId}`
+      `${authApiBase}/users/${userId}`
     )
     return (response as any).data
   },
@@ -281,7 +284,7 @@ export const authService = {
    */
   toggleFriend: async (userId: string): Promise<{ userId: string; isFriend: boolean }> => {
     const response = await apiClient.post<ApiResponseWrapper<{ userId: string; isFriend: boolean }>>(
-      `${API_CONFIG.AUTH_SERVICE_URL}/friends/${userId}/toggle`
+      `${authApiBase}/friends/${userId}/toggle`
     )
     return (response as any).data
   },
