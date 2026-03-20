@@ -15,6 +15,7 @@ const Users = lazy(() => import('@/app/users/page'))
 const UserProfileView = lazy(() => import('@/app/users/profile-view/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const CodePage = lazy(() => import('@/app/code/page'))
+const IdePage = lazy(() => import('@/app/ide/page'))
 const CoursesPage = lazy(() => import('@/app/courses/page'))
 
 // Course assignment pages
@@ -106,6 +107,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/code",
     element: <ProtectedRoute><CodePage /></ProtectedRoute>
+  },
+  {
+    path: "/ide",
+    element: <ProtectedRoute><IdePage /></ProtectedRoute>
   },
 
   // Course Assignment Routes

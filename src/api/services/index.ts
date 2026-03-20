@@ -5,6 +5,7 @@ export * from './classroom'
 export * from './dashboard'
 export * from './submission'
 export * from './analytics'
+export * from './ide-workspace'
 export {
 	getAllProblems,
 	getProblemById as getProblemByIdFromProblemService,

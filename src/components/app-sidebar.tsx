@@ -14,6 +14,7 @@ import {
   // HelpCircle,
   Users,
   GraduationCap,
+  TerminalSquare,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { Logo } from "@/components/logo"
@@ -86,6 +87,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             title: "Users",
             url: "/users",
             icon: Users,
+          },
+          {
+            title: "Online IDE",
+            url: "/ide",
+            icon: TerminalSquare,
           },
           ...(user?.role === "ADMIN"
             ? [
