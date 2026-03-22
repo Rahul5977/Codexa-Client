@@ -114,7 +114,7 @@ export const waitForExecutionResult = async (
   }
 
   const { origin, submissionId } = parsedResult
-  const timeoutMs = options?.timeoutMs ?? 60_000
+  const timeoutMs = options?.timeoutMs ?? 150_000
 
   return new Promise<ExecutionResult>((resolve, reject) => {
     const socket = io(origin, {

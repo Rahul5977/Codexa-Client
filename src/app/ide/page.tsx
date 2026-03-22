@@ -795,7 +795,7 @@ export default function IdePage() {
         src: sourceToExecute,
         stdin: executionStdin,
         lang: selectedLanguageId,
-        timeout: 15,
+        timeout: 120,
       })
 
       setRunStatus("Running")
