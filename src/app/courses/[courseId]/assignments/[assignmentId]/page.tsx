@@ -61,6 +61,18 @@ export default function AssignmentDetailPage() {
     }
   }, [assignmentId])
 
+  useEffect(() => {
+    if (!assignment || isTeacher) {
+      return
+    }
+
+    if (assignment.type === "IDE") {
+      navigate(`/ide?assignmentId=${assignment.id}&courseId=${courseId}`, {
+        replace: true,
+      })
+    }
+  }, [assignment, isTeacher, navigate, courseId])
+
   const fetchAssignmentData = async () => {
     if (!assignmentId) return
 
@@ -75,6 +87,12 @@ export default function AssignmentDetailPage() {
 
       // Only fetch student-specific data if user is a student
       if (!userIsTeacher) {
+        if (assignmentData.type === "IDE") {
+          const submissionData = await assignmentService.getMySubmission(assignmentId)
+          setSubmission(submissionData)
+          return
+        }
+
         const [submissionData, drafts] = await Promise.all([
           assignmentService.getMySubmission(assignmentId),
           assignmentService.getAssignmentDrafts(assignmentId).catch(() => [])
@@ -256,6 +274,7 @@ export default function AssignmentDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
                 <h1 className="text-3xl font-bold">{assignment.title}</h1>
+                <Badge variant="outline">{assignment.type}</Badge>
                 {isTeacher ? (
                   <Badge variant="default">
                     Teacher View
@@ -298,7 +317,11 @@ export default function AssignmentDetailPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  <span>{assignment.problems?.length || 0} problem{(assignment.problems?.length || 0) !== 1 ? 's' : ''}</span>
+                  {assignment.type === "IDE" ? (
+                    <span>{assignment.ideFiles?.length || 0} file{(assignment.ideFiles?.length || 0) !== 1 ? "s" : ""}</span>
+                  ) : (
+                    <span>{assignment.problems?.length || 0} problem{(assignment.problems?.length || 0) !== 1 ? 's' : ''}</span>
+                  )}
                 </div>
               </div>
             </div>

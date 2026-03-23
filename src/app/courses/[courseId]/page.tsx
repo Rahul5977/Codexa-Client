@@ -348,7 +348,13 @@ export default function CourseDetailsPage() {
                           ? 'bg-gradient-to-r from-red-50/50 to-rose-50/50 dark:from-red-950/20 dark:to-rose-950/20 border-red-200 dark:border-red-800 opacity-75'
                           : 'hover:shadow-md border-border'
                       }`}
-                      onClick={() => navigate(`/courses/${courseId}/assignments/${assignment.id}`)}
+                      onClick={() => {
+                        if (assignment.type === "IDE" && !classroom.isTeacher) {
+                          navigate(`/ide?assignmentId=${assignment.id}&courseId=${courseId}`)
+                          return
+                        }
+                        navigate(`/courses/${courseId}/assignments/${assignment.id}`)
+                      }}
                     >
                       <CardHeader>
                         <div className="flex items-start justify-between">
@@ -389,9 +395,16 @@ export default function CourseDetailsPage() {
                               {assignment.description}
                             </CardDescription>
                           </div>
-                          <Badge variant="outline">
-                            {assignment.problems?.length || 0} problems
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {assignment.type}
+                            </Badge>
+                            <Badge variant="outline">
+                              {assignment.type === "IDE"
+                                ? `${assignment.ideFiles?.length || 0} files`
+                                : `${assignment.problems?.length || 0} problems`}
+                            </Badge>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>

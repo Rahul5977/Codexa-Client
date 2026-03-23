@@ -55,11 +55,11 @@ export default function CoursesPage() {
       })
       // Fetch updated classroom data from server
       await fetchClassrooms()
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating course:", error)
       toast({
         title: "Error",
-        description: "Failed to create course",
+        description: error?.message || "Failed to create course",
         variant: "destructive",
       })
     }

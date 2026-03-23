@@ -170,7 +170,10 @@ class ApiClient {
           }
         }
 
-        const errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`
+        const detailMessage = Array.isArray(errorData.errors) && errorData.errors.length > 0
+          ? String(errorData.errors[0])
+          : undefined
+        const errorMessage = detailMessage || errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`
         throw new Error(errorMessage)
       }
 

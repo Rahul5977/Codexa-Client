@@ -1,13 +1,35 @@
 import { apiClient } from "../client"
 import { API_CONFIG } from "../config"
-import type { PaginatedResponse, PaginationParams } from "../types/common"
+import type { PaginationParams } from "../types/common"
+
+export type AssignmentType = "DSA" | "IDE"
+
+export interface IdeAssignmentFile {
+  name: string
+  mimeType: string
+  size: number
+  content: string
+}
+
+export interface AssignmentIdeWorkspace {
+  tree: any
+  fileContents: Record<string, string>
+  selectedNodeId?: string | null
+  selectedLanguageId?: string
+  stdin?: string
+  stdinMode?: "manual" | "file"
+  selectedStdinFileId?: string | null
+  expandedFolderIds?: string[]
+}
 
 export interface Assignment {
   id: string
+  type: AssignmentType
   title: string
   subtitle?: string
   description?: string
   deadline: Date
+  ideFiles?: IdeAssignmentFile[]
   classroomId: string
   createdAt: Date
   updatedAt: Date
@@ -51,6 +73,7 @@ export interface AssignmentSubmission {
   assignmentId: string
   studentId: string
   solutions: Record<string, { code: string; language: string }> // problemId -> solution
+  ideWorkspace?: AssignmentIdeWorkspace | null
   submittedAt: Date
   grade?: number
   feedback?: string
@@ -61,20 +84,32 @@ export interface AssignmentSubmission {
   }
 }
 
+export interface AssignmentSubmissionsResponse {
+  assignment: {
+    id: string
+    title: string
+    deadline: string | Date
+  }
+  submissions: AssignmentSubmission[]
+}
+
 export interface CreateAssignmentDto {
+  type: AssignmentType
   title: string
   subtitle?: string
   description?: string
   deadline: Date
-  problems: Array<{
+  problems?: Array<{
     problemId: string
     order: number
   }>
+  ideFiles?: IdeAssignmentFile[]
 }
 
 export interface SubmitAssignmentDto {
   assignmentId: string
-  solutions: Record<string, { code: string; language: string }>
+  solutions?: Record<string, { code: string; language: string }>
+  ideWorkspace?: AssignmentIdeWorkspace
 }
 
 export interface AssignmentDraft {
@@ -92,6 +127,15 @@ export interface SaveDraftDto {
   problemId: string
   code: string
   languageId: number
+}
+
+export interface AssignmentIdeDraft {
+  id: string
+  assignmentId: string
+  studentId: string
+  workspace: AssignmentIdeWorkspace
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Exam {
@@ -232,20 +276,34 @@ export class AssignmentService {
   ): Promise<AssignmentSubmission> {
     const response = await apiClient.post(
       `${this.baseURL}/assignment/${data.assignmentId}/submit`,
-      data
+      {
+        solutions: data.solutions,
+        ideWorkspace: data.ideWorkspace,
+      }
     )
-    return response.data as AssignmentSubmission
+    const responseData = response.data as { submission: AssignmentSubmission }
+    return responseData.submission
+  }
+
+  async submitIdeAssignment(
+    assignmentId: string,
+    ideWorkspace: AssignmentIdeWorkspace
+  ): Promise<AssignmentSubmission> {
+    return this.submitAssignment({
+      assignmentId,
+      ideWorkspace,
+    })
   }
 
   async getAssignmentSubmissions(
     assignmentId: string,
     params?: PaginationParams
-  ): Promise<PaginatedResponse<AssignmentSubmission>> {
+  ): Promise<AssignmentSubmissionsResponse> {
     const response = await apiClient.get(
       `${this.baseURL}/assignment/${assignmentId}/submissions`,
       { params }
     )
-    return response.data as PaginatedResponse<AssignmentSubmission>
+    return response.data as AssignmentSubmissionsResponse
   }
 
   async getMySubmission(
@@ -324,6 +382,35 @@ export class AssignmentService {
 
   async deleteAssignmentDrafts(assignmentId: string): Promise<void> {
     await apiClient.delete(`${this.baseURL}/assignment/${assignmentId}/drafts`)
+  }
+
+  async saveAssignmentIdeDraft(
+    assignmentId: string,
+    workspace: AssignmentIdeWorkspace
+  ): Promise<AssignmentIdeDraft> {
+    const response = await apiClient.post(
+      `${this.baseURL}/assignment/${assignmentId}/ide-draft`,
+      { workspace }
+    )
+    const data = response.data as { draft: AssignmentIdeDraft }
+    return data.draft
+  }
+
+  async getAssignmentIdeDraft(
+    assignmentId: string
+  ): Promise<AssignmentIdeDraft | null> {
+    try {
+      const response = await apiClient.get(
+        `${this.baseURL}/assignment/${assignmentId}/ide-draft`
+      )
+      const data = response.data as { draft?: AssignmentIdeDraft } | null
+      return data?.draft || null
+    } catch (error: any) {
+      if (error.message?.includes("404")) {
+        return null
+      }
+      throw error
+    }
   }
 
   async gradeSubmission(

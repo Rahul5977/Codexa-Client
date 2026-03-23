@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactElement } from "react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import Editor from "@monaco-editor/react"
 import {
   FolderPlus,
@@ -14,6 +15,8 @@ import {
   Check,
   X,
   Upload,
+  Send,
+  ArrowLeft,
 } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Button } from "@/components/ui/button"
@@ -26,8 +29,10 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
 import { submitExecution, waitForExecutionResult, type ExecutionArtifact, type ExecutionRequest } from "@/api/services/execution-engine"
 import { getIdeWorkspace, saveIdeWorkspace } from "@/api/services/ide-workspace"
+import { assignmentService, type AssignmentIdeWorkspace, type IdeAssignmentFile } from "@/api/services/assignment"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 
 type IdeLanguage = {
   id: ExecutionRequest["lang"]
@@ -81,6 +86,44 @@ const DEFAULT_TREE: TreeNode[] = [
 
 const DEFAULT_FILE_CONTENT: Record<string, string> = {
   "file-main-py": "print(\"Hello Codexa IDE\")\n",
+}
+
+const createWorkspaceFromIdeFiles = (files: IdeAssignmentFile[]): AssignmentIdeWorkspace => {
+  const baseTree: TreeNode[] = [{ id: "folder-assignment", name: "assignment-files", type: "folder", children: [] }]
+  const baseContents: Record<string, string> = {}
+
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index]
+    const fileId = `file-assignment-${index}-${Date.now()}`
+    const folderNode = baseTree[0]
+    if (folderNode.type === "folder") {
+      folderNode.children = [...(folderNode.children || []), { id: fileId, name: file.name, type: "file" }]
+    }
+    baseContents[fileId] = file.content || ""
+  }
+
+  const selectedNodeId = (baseTree[0].type === "folder" ? baseTree[0].children?.[0]?.id : null) || ""
+
+  return {
+    tree: baseTree,
+    fileContents: baseContents,
+    selectedNodeId,
+    selectedLanguageId: "python3",
+    stdin: "",
+    stdinMode: "manual",
+    selectedStdinFileId: null,
+    expandedFolderIds: ["folder-assignment"],
+  }
+}
+
+const resolveDefaultFolderId = (nodes: TreeNode[]): string | null => {
+  const srcFolder = nodes.find((node) => node.type === "folder" && node.name === "src")
+  if (srcFolder) {
+    return srcFolder.id
+  }
+
+  const firstFolder = nodes.find((node) => node.type === "folder")
+  return firstFolder?.id || null
 }
 
 const resolveLanguageByFileName = (fileName: string): IdeLanguage | null => {
@@ -409,6 +452,14 @@ const renderTree = (
 export default function IdePage() {
   const isMobile = useIsMobile()
   const { user, isLoading: authLoading } = useAuth()
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const assignmentId = searchParams.get("assignmentId")
+  const courseId = searchParams.get("courseId")
+  const studentId = searchParams.get("studentId")
+  const queryViewOnly = searchParams.get("viewOnly") === "true"
 
   const [tree, setTree] = useState<TreeNode[]>(DEFAULT_TREE)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["folder-src"]))
@@ -423,6 +474,10 @@ export default function IdePage() {
   const [terminalOutput, setTerminalOutput] = useState("Ready. Click Run to execute your code.\n")
   const [runStatus, setRunStatus] = useState("Idle")
   const [isRunning, setIsRunning] = useState(false)
+  const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false)
+  const [assignmentSubmitted, setAssignmentSubmitted] = useState(false)
+  const [assignmentViewOnly, setAssignmentViewOnly] = useState(false)
+  const [assignmentTitle, setAssignmentTitle] = useState<string | null>(null)
   const terminalOutputRef = useRef<HTMLDivElement | null>(null)
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
   const saveTimerRef = useRef<number | null>(null)
@@ -463,15 +518,15 @@ export default function IdePage() {
 
   const selectedFolderId = useMemo(() => {
     if (!selectedNode) {
-      return null
+      return resolveDefaultFolderId(tree)
     }
 
     if (selectedNode.type === "folder") {
       return selectedNode.id
     }
 
-    return "folder-src"
-  }, [selectedNode])
+    return resolveDefaultFolderId(tree)
+  }, [selectedNode, tree])
 
   const appendTerminalLine = useCallback((line: string) => {
     setTerminalOutput((previous) => `${previous}${line}\n`)
@@ -499,6 +554,92 @@ export default function IdePage() {
       }
 
       try {
+        if (assignmentId) {
+          const assignment = await assignmentService.getAssignmentById(assignmentId)
+          if (cancelled) {
+            return
+          }
+
+          setAssignmentTitle(assignment.title)
+          const isTeacher = user.id === assignment.classroom?.teacher?.id
+
+          const applyWorkspace = (workspace: AssignmentIdeWorkspace | null, fallbackToDefault = false) => {
+            const resolvedTree = workspace?.tree && workspace.tree.length > 0 ? (workspace.tree as TreeNode[]) : DEFAULT_TREE
+            const resolvedFileContents = workspace?.fileContents && Object.keys(workspace.fileContents).length > 0
+              ? workspace.fileContents
+              : DEFAULT_FILE_CONTENT
+
+            const availableFiles = collectFileEntries(resolvedTree)
+            const selectedNodeExists = workspace?.selectedNodeId ? findNodeById(resolvedTree, workspace.selectedNodeId) : null
+            const fallbackSelectedNodeId = availableFiles[0]?.id || "file-main-py"
+
+            setTree(resolvedTree)
+            setFileContents(resolvedFileContents)
+            setSelectedNodeId(selectedNodeExists ? workspace?.selectedNodeId || fallbackSelectedNodeId : fallbackSelectedNodeId)
+            setStdin(workspace?.stdin || "")
+            setStdinMode(workspace?.stdinMode === "file" ? "file" : "manual")
+            setSelectedStdinFileId(workspace?.selectedStdinFileId || null)
+
+            if (workspace?.selectedLanguageId && isExecutionLanguage(workspace.selectedLanguageId)) {
+              setSelectedLanguageId(workspace.selectedLanguageId)
+            }
+
+            const expanded = workspace?.expandedFolderIds && workspace.expandedFolderIds.length > 0
+              ? workspace.expandedFolderIds
+              : [resolveDefaultFolderId(resolvedTree) || "folder-src"]
+            setExpandedFolders(new Set(expanded))
+
+            if (fallbackToDefault && availableFiles.length === 0) {
+              setTree(DEFAULT_TREE)
+              setFileContents(DEFAULT_FILE_CONTENT)
+              setSelectedNodeId("file-main-py")
+              setExpandedFolders(new Set(["folder-src"]))
+            }
+          }
+
+          if (isTeacher && studentId) {
+            const studentSubmission = await assignmentService.getStudentSubmission(assignmentId, studentId)
+            if (cancelled) {
+              return
+            }
+
+            applyWorkspace((studentSubmission?.ideWorkspace as AssignmentIdeWorkspace | null) || null, true)
+            setAssignmentSubmitted(!!studentSubmission)
+            setAssignmentViewOnly(true)
+            setIsWorkspaceReady(true)
+            return
+          }
+
+          const mySubmission = await assignmentService.getMySubmission(assignmentId)
+          if (cancelled) {
+            return
+          }
+
+          if (mySubmission?.ideWorkspace) {
+            applyWorkspace(mySubmission.ideWorkspace as AssignmentIdeWorkspace)
+            setAssignmentSubmitted(true)
+            setAssignmentViewOnly(true)
+            setIsWorkspaceReady(true)
+            return
+          }
+
+          const ideDraft = await assignmentService.getAssignmentIdeDraft(assignmentId)
+          if (cancelled) {
+            return
+          }
+
+          if (ideDraft?.workspace) {
+            applyWorkspace(ideDraft.workspace as AssignmentIdeWorkspace)
+          } else {
+            applyWorkspace(createWorkspaceFromIdeFiles(assignment.ideFiles || []), true)
+          }
+
+          setAssignmentSubmitted(false)
+          setAssignmentViewOnly(queryViewOnly || isTeacher)
+          setIsWorkspaceReady(true)
+          return
+        }
+
         const response = await getIdeWorkspace(user.id)
         if (cancelled || !response.workspace) {
           setIsWorkspaceReady(true)
@@ -543,7 +684,7 @@ export default function IdePage() {
   }, [authLoading, user?.id])
 
   useEffect(() => {
-    if (!isWorkspaceReady || !user?.id) {
+    if (!isWorkspaceReady || !user?.id || assignmentViewOnly) {
       return
     }
 
@@ -553,7 +694,7 @@ export default function IdePage() {
 
     saveTimerRef.current = window.setTimeout(async () => {
       try {
-        await saveIdeWorkspace(user.id, {
+        const workspaceToSave = {
           tree,
           fileContents,
           selectedNodeId,
@@ -562,7 +703,13 @@ export default function IdePage() {
           stdinMode,
           selectedStdinFileId,
           expandedFolderIds: Array.from(expandedFolders),
-        })
+        }
+
+        if (assignmentId) {
+          await assignmentService.saveAssignmentIdeDraft(assignmentId, workspaceToSave)
+        } else {
+          await saveIdeWorkspace(user.id, workspaceToSave)
+        }
       } catch (error) {
         console.error("Failed to save IDE workspace", error)
       }
@@ -584,6 +731,8 @@ export default function IdePage() {
     stdinMode,
     tree,
     user?.id,
+    assignmentId,
+    assignmentViewOnly,
   ])
 
   useEffect(() => {
@@ -635,7 +784,7 @@ export default function IdePage() {
       return
     }
 
-    const parentId = selectedFolderId || "folder-src"
+    const parentId = selectedFolderId
     const newId = `${newNodeType}-${Date.now()}`
 
     const newNode: TreeNode = {
@@ -645,8 +794,12 @@ export default function IdePage() {
       children: newNodeType === "folder" ? [] : undefined,
     }
 
-    setTree((previous) => updateNodeChildren(previous, parentId, (children) => [...children, newNode]))
-    setExpandedFolders((previous) => new Set(previous).add(parentId))
+    if (parentId) {
+      setTree((previous) => updateNodeChildren(previous, parentId, (children) => [...children, newNode]))
+      setExpandedFolders((previous) => new Set(previous).add(parentId))
+    } else {
+      setTree((previous) => [...previous, newNode])
+    }
     setSelectedNodeId(newId)
     setNewNodeName("")
     setNewNodeType(null)
@@ -697,7 +850,7 @@ export default function IdePage() {
         return
       }
 
-      const parentId = selectedFolderId || "folder-src"
+      const parentId = selectedFolderId
       const createdNodes: TreeNode[] = []
       const createdContents: Record<string, string> = {}
 
@@ -719,8 +872,12 @@ export default function IdePage() {
         createdContents[newId] = content
       }
 
-      setTree((previous) => updateNodeChildren(previous, parentId, (children) => [...children, ...createdNodes]))
-      setExpandedFolders((previous) => new Set(previous).add(parentId))
+      if (parentId) {
+        setTree((previous) => updateNodeChildren(previous, parentId, (children) => [...children, ...createdNodes]))
+        setExpandedFolders((previous) => new Set(previous).add(parentId))
+      } else {
+        setTree((previous) => [...previous, ...createdNodes])
+      }
       setFileContents((previous) => ({
         ...previous,
         ...createdContents,
@@ -743,6 +900,71 @@ export default function IdePage() {
     },
     [selectedFolderId, selectedStdinFileId, stdinMode]
   )
+
+  const handleSubmitIdeAssignment = useCallback(async () => {
+    if (!assignmentId || assignmentViewOnly || assignmentSubmitted) {
+      return
+    }
+
+    try {
+      setIsSubmittingAssignment(true)
+      const workspacePayload: AssignmentIdeWorkspace = {
+        tree,
+        fileContents,
+        selectedNodeId,
+        selectedLanguageId,
+        stdin,
+        stdinMode,
+        selectedStdinFileId,
+        expandedFolderIds: Array.from(expandedFolders),
+      }
+
+      await assignmentService.submitIdeAssignment(assignmentId, workspacePayload)
+      setAssignmentSubmitted(true)
+      setAssignmentViewOnly(true)
+      toast({
+        title: "Assignment Submitted",
+        description: "Your IDE workspace has been submitted successfully.",
+      })
+    } catch (error) {
+      console.error("Failed to submit IDE assignment", error)
+      toast({
+        title: "Submission Failed",
+        description: "Could not submit IDE assignment. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingAssignment(false)
+    }
+  }, [
+    assignmentId,
+    assignmentSubmitted,
+    assignmentViewOnly,
+    expandedFolders,
+    fileContents,
+    selectedLanguageId,
+    selectedNodeId,
+    selectedStdinFileId,
+    stdin,
+    stdinMode,
+    toast,
+    tree,
+  ])
+
+  const handleBackFromAssignmentIde = useCallback(() => {
+    if (!courseId || !assignmentId) {
+      return
+    }
+
+    // Teacher review context should return to assignment details.
+    if (studentId || queryViewOnly) {
+      navigate(`/courses/${courseId}/assignments/${assignmentId}`)
+      return
+    }
+
+    // Student IDE assignment context should return to the course page.
+    navigate(`/courses/${courseId}`)
+  }, [assignmentId, courseId, navigate, queryViewOnly, studentId])
 
   const handleCodeChange = useCallback(
     (value: string | undefined) => {
@@ -896,6 +1118,32 @@ export default function IdePage() {
   return (
     <BaseLayout>
       <div className="mx-4 h-[calc(100dvh-var(--header-height)-7rem)] min-h-[650px] px-0">
+        {assignmentId ? (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="outline">IDE Assignment</Badge>
+                {assignmentViewOnly ? <Badge variant="secondary">View Only</Badge> : <Badge variant="default">Editable</Badge>}
+                {assignmentSubmitted ? <Badge variant="default">Submitted</Badge> : null}
+              </div>
+              {assignmentTitle ? <p className="truncate text-sm text-muted-foreground">{assignmentTitle}</p> : null}
+            </div>
+            <div className="flex items-center gap-2">
+              {courseId ? (
+                <Button variant="outline" size="sm" onClick={handleBackFromAssignmentIde}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+              ) : null}
+              {!assignmentViewOnly && !assignmentSubmitted ? (
+                <Button size="sm" onClick={handleSubmitIdeAssignment} disabled={isSubmittingAssignment}>
+                  {isSubmittingAssignment ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  Submit Assignment
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         <div className="h-full w-full overflow-auto rounded-none border-y bg-card/60 backdrop-blur-sm lg:rounded-xl lg:border">
           <PanelGroup direction={isMobile ? "vertical" : "horizontal"} className="h-full min-h-0">
             <Panel defaultSize={22} minSize={15}>
@@ -910,6 +1158,7 @@ export default function IdePage() {
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => handleStartCreate("file")}
+                        disabled={assignmentViewOnly}
                       >
                         <FilePlus2 className="h-4 w-4" />
                       </Button>
@@ -919,10 +1168,11 @@ export default function IdePage() {
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => handleStartCreate("folder")}
+                        disabled={assignmentViewOnly}
                       >
                         <FolderPlus className="h-4 w-4" />
                       </Button>
-                      <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleDeleteSelected}>
+                      <Button type="button" size="icon" variant="ghost" className="h-7 w-7" onClick={handleDeleteSelected} disabled={assignmentViewOnly}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                       <Button
@@ -931,6 +1181,7 @@ export default function IdePage() {
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => uploadInputRef.current?.click()}
+                        disabled={assignmentViewOnly}
                       >
                         <Upload className="h-4 w-4" />
                       </Button>
@@ -1052,6 +1303,7 @@ export default function IdePage() {
                               lineNumbers: "on",
                               tabSize: 2,
                               wordWrap: "on",
+                              readOnly: assignmentViewOnly,
                               scrollBeyondLastLine: false,
                               fontFamily: '"JetBrains Mono", "Fira Code", monospace',
                               lineHeight: 1.5,

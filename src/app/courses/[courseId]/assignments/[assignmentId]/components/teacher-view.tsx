@@ -30,6 +30,7 @@ import {
   Eye,
   Clock,
   CalendarClock,
+  FolderOpen,
 } from "lucide-react"
 import { assignmentService, type Assignment, type AssignmentSubmission } from "@/api/services/assignment"
 import { classroomService, type Student } from "@/api/services/classroom"
@@ -88,9 +89,7 @@ export function TeacherView({ assignment, courseId, assignmentId }: TeacherViewP
         assignmentService.getAssignmentSubmissions(assignmentId)
       ])
 
-      const submissionsArray = Array.isArray(submissionsData) 
-        ? submissionsData 
-        : (submissionsData as any)?.submissions || []
+      const submissionsArray = submissionsData?.submissions || []
       
       setSubmissions(submissionsArray)
 
@@ -268,7 +267,35 @@ export function TeacherView({ assignment, courseId, assignmentId }: TeacherViewP
         {/* Problems Tab */}
         <TabsContent value="problems" className="mt-6">
           <div className="grid gap-4">
-            {assignment.problems?.map((assignmentProblem, index) => {
+            {assignment.type === "IDE" ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <FolderOpen className="h-5 w-5" />
+                    IDE Assignment Files
+                  </CardTitle>
+                  <CardDescription>
+                    These files are provided to students inside the online IDE explorer.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {assignment.ideFiles && assignment.ideFiles.length > 0 ? (
+                    <div className="space-y-2">
+                      {assignment.ideFiles.map((file) => (
+                        <div key={file.name} className="flex items-center justify-between rounded-md border p-3">
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{file.name}</div>
+                            <div className="text-xs text-muted-foreground">{Math.ceil(file.size / 1024)} KB</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No assignment files uploaded.</p>
+                  )}
+                </CardContent>
+              </Card>
+            ) : assignment.problems?.map((assignmentProblem, index) => {
               const problem = assignmentProblem.problem
 
               return (
@@ -436,17 +463,28 @@ export function TeacherView({ assignment, courseId, assignmentId }: TeacherViewP
                           )}
 
                           <div className="flex gap-2">
-                            {assignment.problems?.map((ap, idx) => (
+                            {assignment.type === "IDE" ? (
                               <Button
-                                key={ap.problemId}
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleViewSubmission(student, ap.problemId)}
+                                onClick={() => navigate(`/ide?assignmentId=${assignmentId}&courseId=${courseId}&studentId=${student.id}&viewOnly=true`)}
                               >
-                                <Code className="mr-1 h-3 w-3" />
-                                Problem {idx + 1}
+                                <Eye className="mr-1 h-3 w-3" />
+                                Open IDE Submission
                               </Button>
-                            ))}
+                            ) : (
+                              assignment.problems?.map((ap, idx) => (
+                                <Button
+                                  key={ap.problemId}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleViewSubmission(student, ap.problemId)}
+                                >
+                                  <Code className="mr-1 h-3 w-3" />
+                                  Problem {idx + 1}
+                                </Button>
+                              ))
+                            )}
                             <Button
                               variant={student.submission.grade !== null ? "secondary" : "default"}
                               size="sm"
