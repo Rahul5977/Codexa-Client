@@ -136,15 +136,20 @@ export default function CourseDetailsPage() {
   const handleCreateExam = async (data: CreateExamFormData) => {
     try {
       const examData: CreateExamDto = {
+        type: data.type,
         title: data.title,
         subtitle: data.subtitle,
         description: data.description,
         startTime: new Date(data.startTime),
         duration: data.duration,
-        problems: data.problemIds.map((problemId, index) => ({
-          problemId,
-          order: index + 1,
-        })),
+        problems:
+          data.type === "DSA"
+            ? data.problemIds.map((problemId, index) => ({
+                problemId,
+                order: index + 1,
+              }))
+            : undefined,
+        ideFiles: data.type === "IDE" ? data.ideFiles : undefined,
       }
 
       await assignmentService.createExam(courseId, examData)

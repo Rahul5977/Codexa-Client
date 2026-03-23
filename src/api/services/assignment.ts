@@ -140,11 +140,13 @@ export interface AssignmentIdeDraft {
 
 export interface Exam {
   id: string
+  type: AssignmentType
   title: string
   subtitle?: string
   description?: string
   startTime: Date
   duration: number // in minutes
+  ideFiles?: IdeAssignmentFile[]
   classroomId: string
   createdAt: Date
   updatedAt: Date
@@ -200,6 +202,7 @@ export interface ExamSubmission {
   examId: string
   studentId: string
   solutions: Record<string, { code: string; language: string }> // problemId -> solution
+  ideWorkspace?: AssignmentIdeWorkspace | null
   startedAt: Date
   submittedAt: Date | null
   finishedAt: Date | null
@@ -226,15 +229,22 @@ export interface ExamSubmission {
 }
 
 export interface CreateExamDto {
+  type: AssignmentType
   title: string
   subtitle?: string
   description?: string
   startTime: Date
   duration: number
-  problems: Array<{
+  problems?: Array<{
     problemId: string
     order: number
   }>
+  ideFiles?: IdeAssignmentFile[]
+}
+
+export interface SubmitExamDto {
+  solutions?: Record<string, { code: string; language: string; languageId?: number }>
+  ideWorkspace?: AssignmentIdeWorkspace
 }
 
 export class AssignmentService {
@@ -527,11 +537,14 @@ export class AssignmentService {
 
   async updateExamSubmission(
     examId: string,
-    solutions: Record<string, { code: string; language: string }>
+    data: SubmitExamDto
   ): Promise<ExamSubmission> {
     const response = await apiClient.put(
       `${this.baseURL}/exam/${examId}/submission`,
-      { solutions }
+      {
+        solutions: data.solutions,
+        ideWorkspace: data.ideWorkspace,
+      }
     )
     const submission = (response.data as any).submission as ExamSubmission
     return {

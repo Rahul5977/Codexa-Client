@@ -366,7 +366,9 @@ export default function TakeExamPage() {
         codeLength: currentSolutions[id].code?.length || 0
       })))
 
-      await assignmentService.updateExamSubmission(examId, currentSolutions)
+      await assignmentService.updateExamSubmission(examId, {
+        solutions: currentSolutions,
+      })
       
       // Update last saved for all cached problems
       Object.keys(currentSolutions).forEach(problemId => {
@@ -423,7 +425,9 @@ export default function TakeExamPage() {
         languageId,
       }
 
-      await assignmentService.updateExamSubmission(examId, currentSolutions)
+      await assignmentService.updateExamSubmission(examId, {
+        solutions: currentSolutions,
+      })
       
       // Update last saved for all cached problems
       Object.keys(currentSolutions).forEach(problemId => {
