@@ -252,6 +252,36 @@ const findNodeById = (nodes: TreeNode[], targetId: string): TreeNode | null => {
   return null
 }
 
+const findParentFolderId = (
+  nodes: TreeNode[],
+  targetId: string,
+  parentFolderId: string | null = null
+): string | null | undefined => {
+  for (const node of nodes) {
+    if (node.id === targetId) {
+      return parentFolderId
+    }
+
+    if (node.type === "folder" && node.children) {
+      const resolved = findParentFolderId(node.children, targetId, node.id)
+      if (resolved !== undefined) {
+        return resolved
+      }
+    }
+  }
+
+  return undefined
+}
+
+const generateNodeId = (type: NewNodeType) => {
+  const randomPart =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`
+
+  return `${type}-${randomPart}`
+}
+
 const removeNodeById = (nodes: TreeNode[], targetId: string): TreeNode[] => {
   return nodes
     .filter((node) => node.id !== targetId)
@@ -601,7 +631,13 @@ export default function IdePage() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
   const saveTimerRef = useRef<number | null>(null)
+  const toastRef = useRef(toast)
+  const loadedWorkspaceContextRef = useRef<string | null>(null)
   const [isWorkspaceReady, setIsWorkspaceReady] = useState(false)
+
+  useEffect(() => {
+    toastRef.current = toast
+  }, [toast])
 
   const buildWorkspacePayload = useCallback((): AssignmentIdeWorkspace => {
     return {
@@ -710,6 +746,11 @@ export default function IdePage() {
       return selectedNode.id
     }
 
+    const parentFolderId = findParentFolderId(tree, selectedNode.id)
+    if (parentFolderId !== undefined) {
+      return parentFolderId
+    }
+
     return resolveDefaultFolderId(tree)
   }, [selectedNode, tree])
 
@@ -762,12 +803,26 @@ export default function IdePage() {
   useEffect(() => {
     let cancelled = false
 
+    const workspaceContextKey = [
+      user?.id || "",
+      assignmentId || "",
+      examId || "",
+      studentId || "",
+      isExamTeacherReview ? "1" : "0",
+      queryViewOnly ? "1" : "0",
+    ].join("|")
+
     const loadWorkspace = async () => {
       if (authLoading) {
         return
       }
 
+      if (loadedWorkspaceContextRef.current === workspaceContextKey) {
+        return
+      }
+
       if (!user?.id) {
+        loadedWorkspaceContextRef.current = workspaceContextKey
         setIsWorkspaceReady(true)
         return
       }
@@ -839,7 +894,7 @@ export default function IdePage() {
           }
 
           if (!submissionData) {
-            toast({
+            toastRef.current({
               title: isExamTeacherReview ? "Submission Not Found" : "Exam Not Started",
               description: isExamTeacherReview
                 ? "No submission was found for this student."
@@ -853,7 +908,7 @@ export default function IdePage() {
           }
 
           if (submissionData.finishedAt && !isExamTeacherReview) {
-            toast({
+            toastRef.current({
               title: "Exam Completed",
               description: "You have already finished this exam.",
             })
@@ -892,6 +947,7 @@ export default function IdePage() {
           }
 
           setIsWorkspaceReady(true)
+          loadedWorkspaceContextRef.current = workspaceContextKey
           return
         }
 
@@ -932,6 +988,7 @@ export default function IdePage() {
         }
 
         setExpandedFolders(new Set(workspace.expandedFolderIds && workspace.expandedFolderIds.length > 0 ? workspace.expandedFolderIds : ["folder-src"]))
+        loadedWorkspaceContextRef.current = workspaceContextKey
       } catch (error) {
         console.error("Failed to load IDE workspace", error)
       } finally {
@@ -946,7 +1003,7 @@ export default function IdePage() {
     return () => {
       cancelled = true
     }
-  }, [applyWorkspace, authLoading, assignmentId, courseId, examId, isExamTeacherReview, navigate, studentId, toast, user?.id, queryViewOnly])
+  }, [applyWorkspace, authLoading, assignmentId, courseId, examId, isExamTeacherReview, navigate, studentId, user?.id, queryViewOnly])
 
   const generateTeacherIdeAIReport = useCallback(async () => {
     if (!isTeacherReviewContext) {
@@ -1171,7 +1228,7 @@ export default function IdePage() {
     }
 
     const parentId = selectedFolderId
-    const newId = `${newNodeType}-${Date.now()}`
+    const newId = generateNodeId(newNodeType)
 
     const newNode: TreeNode = {
       id: newId,
