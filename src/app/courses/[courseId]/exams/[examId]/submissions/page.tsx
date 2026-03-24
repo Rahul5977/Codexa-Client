@@ -103,6 +103,14 @@ export default function ExamSubmissionsPage() {
   }
 
   const handleViewSubmission = (submission: ExamSubmission) => {
+    const normalizedType = String(exam?.type || "").toUpperCase()
+    const isIdeExam = normalizedType === "IDE" || (Array.isArray(exam?.ideFiles) && (exam?.ideFiles?.length || 0) > 0)
+
+    if (isIdeExam) {
+      navigate(`/ide?courseId=${courseId}&examId=${examId}&studentId=${submission.studentId}&viewOnly=true`)
+      return
+    }
+
     navigate(`/courses/${courseId}/exams/${examId}/submissions/${submission.id}`)
   }
 

@@ -161,6 +161,13 @@ export default function ViewExamSubmissionPage() {
       if (!targetSubmission) {
         throw new Error("Submission not found")
       }
+
+      const normalizedType = String(examData.type || "").toUpperCase()
+      const isIdeExam = normalizedType === "IDE" || (Array.isArray(examData.ideFiles) && examData.ideFiles.length > 0)
+      if (isIdeExam) {
+        navigate(`/ide?courseId=${courseId}&examId=${examId}&studentId=${targetSubmission.studentId}&viewOnly=true`)
+        return
+      }
       
       setSubmission(targetSubmission)
       setGrade(targetSubmission.grade?.toString() || "")

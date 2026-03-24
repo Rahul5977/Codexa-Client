@@ -293,6 +293,23 @@ export default function TakeExamPage() {
         return
       }
 
+      const normalizedType = String(examData.type || "").toUpperCase()
+      const hasIdeFiles = Array.isArray(examData.ideFiles) && examData.ideFiles.length > 0
+      const hasNoDsaProblems = !Array.isArray(examData.problems) || examData.problems.length === 0
+      const hasIdeWorkspaceSnapshot =
+        !!submissionData.ideWorkspace &&
+        Array.isArray((submissionData.ideWorkspace as any).tree) &&
+        ((submissionData.ideWorkspace as any).tree?.length || 0) > 0
+      const isIdeExam =
+        normalizedType === "IDE" ||
+        hasIdeFiles ||
+        hasNoDsaProblems ||
+        hasIdeWorkspaceSnapshot
+      if (isIdeExam) {
+        navigate(`/ide?courseId=${courseId}&examId=${examId}`)
+        return
+      }
+
       // Calculate initial time remaining
       const submissionEndTime = new Date(
         new Date(submissionData.startedAt).getTime() + examData.duration * 60000

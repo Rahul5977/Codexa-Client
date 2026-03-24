@@ -17,6 +17,14 @@ import {
   Upload,
   Send,
   ArrowLeft,
+  Brain,
+  AlertCircle,
+  RefreshCw,
+  Clock,
+  Camera,
+  Mic,
+  Maximize,
+  ShieldAlert,
 } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { Button } from "@/components/ui/button"
@@ -24,15 +32,29 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
 import { submitExecution, waitForExecutionResult, type ExecutionArtifact, type ExecutionRequest } from "@/api/services/execution-engine"
 import { getIdeWorkspace, saveIdeWorkspace } from "@/api/services/ide-workspace"
-import { assignmentService, type AssignmentIdeWorkspace, type IdeAssignmentFile } from "@/api/services/assignment"
+import { assignmentService, type AssignmentIdeWorkspace, type IdeAssignmentFile, type Exam, type ExamSubmission } from "@/api/services/assignment"
+import { generateCustomAIAnalysis, type AIAnalysisReport } from "@/api/services/ai-analytics"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
+import { useProctoring } from "@/hooks/use-proctoring"
 
 type IdeLanguage = {
   id: ExecutionRequest["lang"]
@@ -57,6 +79,39 @@ type NewNodeType = "file" | "folder"
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg"])
 const BINARY_PREVIEW_EXTENSIONS = new Set(["png", "jpg", "jpeg", "pdf"])
+const AI_SUPPORTED_EXTENSIONS = new Set([
+  "py",
+  "cpp",
+  "cc",
+  "cxx",
+  "c",
+  "java",
+  "js",
+  "ts",
+  "tsx",
+  "jsx",
+  "go",
+  "rs",
+  "rb",
+  "php",
+  "cs",
+  "kt",
+  "swift",
+  "sql",
+  "json",
+  "yml",
+  "yaml",
+  "sh",
+  "md",
+  "txt",
+])
+
+const LANGUAGE_TO_AI_LABEL: Partial<Record<ExecutionRequest["lang"], string>> = {
+  python3: "python",
+  cpp: "cpp",
+  c: "c",
+  java: "java",
+}
 
 const isExecutionLanguage = (value: string): value is ExecutionRequest["lang"] => {
   return IDE_LANGUAGES.some((language) => language.id === value)
@@ -91,6 +146,27 @@ const DEFAULT_FILE_CONTENT: Record<string, string> = {
 const createWorkspaceFromIdeFiles = (files: IdeAssignmentFile[]): AssignmentIdeWorkspace => {
   const baseTree: TreeNode[] = [{ id: "folder-assignment", name: "assignment-files", type: "folder", children: [] }]
   const baseContents: Record<string, string> = {}
+
+  if (files.length === 0) {
+    const placeholderId = "file-assignment-readme"
+    const folderNode = baseTree[0]
+    if (folderNode.type === "folder") {
+      folderNode.children = [{ id: placeholderId, name: "README.md", type: "file" }]
+    }
+    baseContents[placeholderId] =
+      "# IDE Exam Workspace\n\nNo starter files were uploaded for this exam.\nYou can create files/folders and continue your solution here.\n"
+
+    return {
+      tree: baseTree,
+      fileContents: baseContents,
+      selectedNodeId: placeholderId,
+      selectedLanguageId: "python3",
+      stdin: "",
+      stdinMode: "manual",
+      selectedStdinFileId: null,
+      expandedFolderIds: ["folder-assignment"],
+    }
+  }
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index]
@@ -395,6 +471,36 @@ const preparePythonRuntimeFiles = (
   return Array.from(deduped.entries()).map(([path, content]) => ({ path, content }))
 }
 
+const buildAIWorkspaceSnapshot = (
+  files: FileEntry[],
+  contentById: Record<string, string>,
+  maxChars = 16000
+): string => {
+  const sections: string[] = []
+  let budget = maxChars
+
+  for (const file of files) {
+    if (budget <= 0) break
+    const ext = extensionOf(file.path)
+    if (!AI_SUPPORTED_EXTENSIONS.has(ext) || isBinaryPreviewFile(file.path)) {
+      continue
+    }
+
+    const fileContent = contentById[file.id] || ""
+    if (!fileContent.trim()) {
+      continue
+    }
+
+    const sectionHeader = `\n\n// FILE: ${file.path}\n`
+    const sectionBudget = Math.max(budget - sectionHeader.length, 0)
+    const trimmedContent = fileContent.slice(0, sectionBudget)
+    sections.push(`${sectionHeader}${trimmedContent}`)
+    budget -= sectionHeader.length + trimmedContent.length
+  }
+
+  return sections.join("").trim()
+}
+
 const renderTree = (
   nodes: TreeNode[],
   selectedNodeId: string | null,
@@ -457,9 +563,11 @@ export default function IdePage() {
   const [searchParams] = useSearchParams()
 
   const assignmentId = searchParams.get("assignmentId")
+  const examId = searchParams.get("examId")
   const courseId = searchParams.get("courseId")
   const studentId = searchParams.get("studentId")
   const queryViewOnly = searchParams.get("viewOnly") === "true"
+  const isExamTeacherReview = Boolean(examId && studentId)
 
   const [tree, setTree] = useState<TreeNode[]>(DEFAULT_TREE)
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["folder-src"]))
@@ -478,10 +586,87 @@ export default function IdePage() {
   const [assignmentSubmitted, setAssignmentSubmitted] = useState(false)
   const [assignmentViewOnly, setAssignmentViewOnly] = useState(false)
   const [assignmentTitle, setAssignmentTitle] = useState<string | null>(null)
+  const [isTeacherReviewContext, setIsTeacherReviewContext] = useState(false)
+  const [enableTeacherAI, setEnableTeacherAI] = useState(false)
+  const [teacherAIReport, setTeacherAIReport] = useState<AIAnalysisReport | null>(null)
+  const [teacherAIError, setTeacherAIError] = useState<string | null>(null)
+  const [teacherAILoading, setTeacherAILoading] = useState(false)
+  const [exam, setExam] = useState<Exam | null>(null)
+  const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState<number>(0)
+  const [showProctoringSetup, setShowProctoringSetup] = useState(false)
+  const [proctoringReady, setProctoringReady] = useState(false)
+  const [isFinishingExam, setIsFinishingExam] = useState(false)
   const terminalOutputRef = useRef<HTMLDivElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
   const uploadInputRef = useRef<HTMLInputElement | null>(null)
   const saveTimerRef = useRef<number | null>(null)
   const [isWorkspaceReady, setIsWorkspaceReady] = useState(false)
+
+  const buildWorkspacePayload = useCallback((): AssignmentIdeWorkspace => {
+    return {
+      tree,
+      fileContents,
+      selectedNodeId,
+      selectedLanguageId,
+      stdin,
+      stdinMode,
+      selectedStdinFileId,
+      expandedFolderIds: Array.from(expandedFolders),
+    }
+  }, [expandedFolders, fileContents, selectedLanguageId, selectedNodeId, selectedStdinFileId, stdin, stdinMode, tree])
+
+  const handleFinishIdeExam = useCallback(async (autoSubmitted = false) => {
+    if (!examId || isFinishingExam) {
+      return
+    }
+
+    try {
+      setIsFinishingExam(true)
+
+      if (!autoSubmitted) {
+        await assignmentService.updateExamSubmission(examId, {
+          ideWorkspace: buildWorkspacePayload(),
+        })
+      }
+
+      await assignmentService.finishExam(examId)
+
+      toast({
+        title: autoSubmitted ? "Time's Up" : "Exam Submitted",
+        description: autoSubmitted
+          ? "Your IDE exam was automatically submitted."
+          : "Your IDE exam has been submitted successfully.",
+      })
+
+      if (courseId) {
+        navigate(`/courses/${courseId}/exams/${examId}`)
+      } else {
+        navigate("/courses")
+      }
+    } catch (error: any) {
+      toast({
+        title: "Submission Failed",
+        description: error?.response?.data?.message || "Failed to submit IDE exam.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsFinishingExam(false)
+    }
+  }, [buildWorkspacePayload, courseId, examId, isFinishingExam, navigate, toast])
+
+  const {
+    state: proctoringState,
+    requestMediaAccess,
+    enterFullscreen,
+  } = useProctoring({
+    examId: examId || "",
+    enabled: Boolean(examId && !isExamTeacherReview),
+    maxViolations: 3,
+    onMaxViolationsReached: () => {
+      void handleFinishIdeExam(true)
+    },
+  })
 
   const selectedNode = useMemo(() => findNodeById(tree, selectedNodeId), [tree, selectedNodeId])
   const selectedFileNode = selectedNode?.type === "file" ? selectedNode : null
@@ -540,6 +725,40 @@ export default function IdePage() {
     terminalOutputRef.current.scrollTop = terminalOutputRef.current.scrollHeight
   }, [terminalOutput])
 
+  const applyWorkspace = useCallback((workspace: AssignmentIdeWorkspace | null, fallbackToDefault = false) => {
+    const resolvedTree = workspace?.tree && workspace.tree.length > 0 ? (workspace.tree as TreeNode[]) : DEFAULT_TREE
+    const resolvedFileContents = workspace?.fileContents && Object.keys(workspace.fileContents).length > 0
+      ? workspace.fileContents
+      : DEFAULT_FILE_CONTENT
+
+    const availableFiles = collectFileEntries(resolvedTree)
+    const selectedNodeExists = workspace?.selectedNodeId ? findNodeById(resolvedTree, workspace.selectedNodeId) : null
+    const fallbackSelectedNodeId = availableFiles[0]?.id || "file-main-py"
+
+    setTree(resolvedTree)
+    setFileContents(resolvedFileContents)
+    setSelectedNodeId(selectedNodeExists ? workspace?.selectedNodeId || fallbackSelectedNodeId : fallbackSelectedNodeId)
+    setStdin(workspace?.stdin || "")
+    setStdinMode(workspace?.stdinMode === "file" ? "file" : "manual")
+    setSelectedStdinFileId(workspace?.selectedStdinFileId || null)
+
+    if (workspace?.selectedLanguageId && isExecutionLanguage(workspace.selectedLanguageId)) {
+      setSelectedLanguageId(workspace.selectedLanguageId)
+    }
+
+    const expanded = workspace?.expandedFolderIds && workspace.expandedFolderIds.length > 0
+      ? workspace.expandedFolderIds
+      : [resolveDefaultFolderId(resolvedTree) || "folder-src"]
+    setExpandedFolders(new Set(expanded))
+
+    if (fallbackToDefault && availableFiles.length === 0) {
+      setTree(DEFAULT_TREE)
+      setFileContents(DEFAULT_FILE_CONTENT)
+      setSelectedNodeId("file-main-py")
+      setExpandedFolders(new Set(["folder-src"]))
+    }
+  }, [])
+
   useEffect(() => {
     let cancelled = false
 
@@ -562,40 +781,7 @@ export default function IdePage() {
 
           setAssignmentTitle(assignment.title)
           const isTeacher = user.id === assignment.classroom?.teacher?.id
-
-          const applyWorkspace = (workspace: AssignmentIdeWorkspace | null, fallbackToDefault = false) => {
-            const resolvedTree = workspace?.tree && workspace.tree.length > 0 ? (workspace.tree as TreeNode[]) : DEFAULT_TREE
-            const resolvedFileContents = workspace?.fileContents && Object.keys(workspace.fileContents).length > 0
-              ? workspace.fileContents
-              : DEFAULT_FILE_CONTENT
-
-            const availableFiles = collectFileEntries(resolvedTree)
-            const selectedNodeExists = workspace?.selectedNodeId ? findNodeById(resolvedTree, workspace.selectedNodeId) : null
-            const fallbackSelectedNodeId = availableFiles[0]?.id || "file-main-py"
-
-            setTree(resolvedTree)
-            setFileContents(resolvedFileContents)
-            setSelectedNodeId(selectedNodeExists ? workspace?.selectedNodeId || fallbackSelectedNodeId : fallbackSelectedNodeId)
-            setStdin(workspace?.stdin || "")
-            setStdinMode(workspace?.stdinMode === "file" ? "file" : "manual")
-            setSelectedStdinFileId(workspace?.selectedStdinFileId || null)
-
-            if (workspace?.selectedLanguageId && isExecutionLanguage(workspace.selectedLanguageId)) {
-              setSelectedLanguageId(workspace.selectedLanguageId)
-            }
-
-            const expanded = workspace?.expandedFolderIds && workspace.expandedFolderIds.length > 0
-              ? workspace.expandedFolderIds
-              : [resolveDefaultFolderId(resolvedTree) || "folder-src"]
-            setExpandedFolders(new Set(expanded))
-
-            if (fallbackToDefault && availableFiles.length === 0) {
-              setTree(DEFAULT_TREE)
-              setFileContents(DEFAULT_FILE_CONTENT)
-              setSelectedNodeId("file-main-py")
-              setExpandedFolders(new Set(["folder-src"]))
-            }
-          }
+          setIsTeacherReviewContext(Boolean(isTeacher && studentId))
 
           if (isTeacher && studentId) {
             const studentSubmission = await assignmentService.getStudentSubmission(assignmentId, studentId)
@@ -640,6 +826,85 @@ export default function IdePage() {
           return
         }
 
+        if (examId) {
+          const [examData, submissionData] = await Promise.all([
+            assignmentService.getExamById(examId),
+            isExamTeacherReview
+              ? assignmentService.getExamSubmissions(examId).then((items) => items.find((item) => item.studentId === studentId) || null)
+              : assignmentService.getMyExamSubmission(examId),
+          ])
+
+          if (cancelled) {
+            return
+          }
+
+          if (!submissionData) {
+            toast({
+              title: isExamTeacherReview ? "Submission Not Found" : "Exam Not Started",
+              description: isExamTeacherReview
+                ? "No submission was found for this student."
+                : "Start the exam before opening the IDE.",
+              variant: "destructive",
+            })
+            if (courseId) {
+              navigate(isExamTeacherReview ? `/courses/${courseId}/exams/${examId}/submissions` : `/courses/${courseId}/exams/${examId}`)
+            }
+            return
+          }
+
+          if (submissionData.finishedAt && !isExamTeacherReview) {
+            toast({
+              title: "Exam Completed",
+              description: "You have already finished this exam.",
+            })
+            if (courseId) {
+              navigate(`/courses/${courseId}/exams/${examId}`)
+            }
+            return
+          }
+
+          setExam(examData)
+          setExamSubmission(submissionData)
+          setAssignmentTitle(examData.title)
+          setIsTeacherReviewContext(false)
+          setEnableTeacherAI(false)
+          setTeacherAIReport(null)
+          setTeacherAIError(null)
+          setAssignmentSubmitted(false)
+          setAssignmentViewOnly(isExamTeacherReview || queryViewOnly)
+
+          const submissionWorkspace = submissionData.ideWorkspace as AssignmentIdeWorkspace | null
+          const hasSubmissionWorkspaceTree =
+            !!submissionWorkspace &&
+            Array.isArray(submissionWorkspace.tree) &&
+            submissionWorkspace.tree.length > 0
+          const hasSubmissionWorkspaceContents =
+            !!submissionWorkspace &&
+            !!submissionWorkspace.fileContents &&
+            Object.keys(submissionWorkspace.fileContents).length > 0
+
+          // For IDE exams, prefer a populated submission workspace; otherwise
+          // bootstrap from teacher-provided exam files instead of default template.
+          if (hasSubmissionWorkspaceTree && hasSubmissionWorkspaceContents) {
+            applyWorkspace(submissionWorkspace, false)
+          } else {
+            applyWorkspace(createWorkspaceFromIdeFiles(examData.ideFiles || []), false)
+          }
+
+          setIsWorkspaceReady(true)
+          return
+        }
+
+        setIsTeacherReviewContext(false)
+        setEnableTeacherAI(false)
+        setTeacherAIReport(null)
+        setTeacherAIError(null)
+        setExam(null)
+        setExamSubmission(null)
+        setTimeRemaining(0)
+        setShowProctoringSetup(false)
+        setProctoringReady(false)
+
         const response = await getIdeWorkspace(user.id)
         if (cancelled || !response.workspace) {
           setIsWorkspaceReady(true)
@@ -681,7 +946,58 @@ export default function IdePage() {
     return () => {
       cancelled = true
     }
-  }, [authLoading, user?.id])
+  }, [applyWorkspace, authLoading, assignmentId, courseId, examId, isExamTeacherReview, navigate, studentId, toast, user?.id, queryViewOnly])
+
+  const generateTeacherIdeAIReport = useCallback(async () => {
+    if (!isTeacherReviewContext) {
+      return
+    }
+
+    const snapshot = buildAIWorkspaceSnapshot(allFiles, fileContents)
+    if (!snapshot.trim()) {
+      setTeacherAIError("No analyzable code files were found in this IDE workspace.")
+      setTeacherAIReport(null)
+      return
+    }
+
+    try {
+      setTeacherAILoading(true)
+      setTeacherAIError(null)
+
+      const report = await generateCustomAIAnalysis({
+        code: snapshot,
+        language: LANGUAGE_TO_AI_LABEL[selectedLanguageId] || "plaintext",
+        status: "SUBMITTED",
+        executionTimeMs: 0,
+        memoryKb: 0,
+        problemTitle: assignmentTitle || "IDE Assignment",
+        difficulty: "CLASSROOM",
+      })
+
+      setTeacherAIReport(report)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to generate AI report"
+      setTeacherAIError(message)
+      setTeacherAIReport(null)
+    } finally {
+      setTeacherAILoading(false)
+    }
+  }, [allFiles, assignmentTitle, fileContents, isTeacherReviewContext, selectedLanguageId])
+
+  useEffect(() => {
+    if (!enableTeacherAI) {
+      setTeacherAIReport(null)
+      setTeacherAIError(null)
+      setTeacherAILoading(false)
+      return
+    }
+
+    if (!isTeacherReviewContext || !isWorkspaceReady) {
+      return
+    }
+
+    generateTeacherIdeAIReport()
+  }, [enableTeacherAI, generateTeacherIdeAIReport, isTeacherReviewContext, isWorkspaceReady])
 
   useEffect(() => {
     if (!isWorkspaceReady || !user?.id || assignmentViewOnly) {
@@ -705,7 +1021,11 @@ export default function IdePage() {
           expandedFolderIds: Array.from(expandedFolders),
         }
 
-        if (assignmentId) {
+        if (examId) {
+          await assignmentService.updateExamSubmission(examId, {
+            ideWorkspace: workspaceToSave,
+          })
+        } else if (assignmentId) {
           await assignmentService.saveAssignmentIdeDraft(assignmentId, workspaceToSave)
         } else {
           await saveIdeWorkspace(user.id, workspaceToSave)
@@ -731,9 +1051,75 @@ export default function IdePage() {
     stdinMode,
     tree,
     user?.id,
+    examId,
     assignmentId,
     assignmentViewOnly,
   ])
+
+  useEffect(() => {
+    if (!exam || !examSubmission || examSubmission.finishedAt || isExamTeacherReview) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      const endTime = new Date(new Date(examSubmission.startedAt).getTime() + exam.duration * 60000)
+      const remaining = Math.max(0, endTime.getTime() - Date.now())
+      setTimeRemaining(remaining)
+
+      if (remaining <= 0) {
+        void handleFinishIdeExam(true)
+      }
+    }, 1000)
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [exam, examSubmission, handleFinishIdeExam, isExamTeacherReview])
+
+  useEffect(() => {
+    if (!examId || !isWorkspaceReady || !examSubmission || examSubmission.finishedAt || proctoringReady || isExamTeacherReview) {
+      return
+    }
+
+    setShowProctoringSetup(true)
+  }, [examId, examSubmission, isExamTeacherReview, isWorkspaceReady, proctoringReady])
+
+  useEffect(() => {
+    if (videoRef.current && proctoringState.mediaStream) {
+      videoRef.current.srcObject = proctoringState.mediaStream
+    }
+  }, [proctoringState.mediaStream])
+
+  const handleProctoringSetup = useCallback(async () => {
+    const mediaGranted = await requestMediaAccess()
+    if (!mediaGranted) {
+      return
+    }
+
+    const fullscreenGranted = await enterFullscreen()
+    if (!fullscreenGranted) {
+      return
+    }
+
+    setProctoringReady(true)
+    setShowProctoringSetup(false)
+  }, [enterFullscreen, requestMediaAccess])
+
+  const formatTime = useCallback((ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const hours = Math.floor(totalSeconds / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
+  }, [])
+
+  const getTimeColor = useCallback((): string => {
+    const minutesLeft = timeRemaining / 60000
+    if (minutesLeft <= 5) return "text-red-600"
+    if (minutesLeft <= 15) return "text-amber-600"
+    return "text-green-600"
+  }, [timeRemaining])
 
   useEffect(() => {
     if (stdinMode !== "file") {
@@ -1118,6 +1504,61 @@ export default function IdePage() {
   return (
     <BaseLayout>
       <div className="mx-4 h-[calc(100dvh-var(--header-height)-7rem)] min-h-[650px] px-0">
+        {examId && exam ? (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-sm">
+                <Badge variant="outline">IDE Exam</Badge>
+                <Badge variant="secondary">{isExamTeacherReview ? "Teacher Review" : "Proctored"}</Badge>
+                {proctoringState.violationCount > 0 ? (
+                  <Badge variant="destructive">
+                    {proctoringState.violationCount} Warning{proctoringState.violationCount !== 1 ? "s" : ""}
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="truncate text-sm text-muted-foreground">{exam.title}</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {!isExamTeacherReview ? (
+                <>
+                  <Badge variant={proctoringState.cameraEnabled ? "default" : "destructive"} className="gap-1">
+                    <Camera className="h-3 w-3" />
+                    {proctoringState.cameraEnabled ? "Cam On" : "Cam Off"}
+                  </Badge>
+                  <Badge variant={proctoringState.microphoneEnabled ? "default" : "destructive"} className="gap-1">
+                    <Mic className="h-3 w-3" />
+                    {proctoringState.microphoneEnabled ? "Mic On" : "Mic Off"}
+                  </Badge>
+                  <Badge variant={proctoringState.isFullscreen ? "default" : "destructive"} className="gap-1">
+                    <Maximize className="h-3 w-3" />
+                    {proctoringState.isFullscreen ? "Fullscreen" : "Exit FS"}
+                  </Badge>
+                </>
+              ) : null}
+
+              <div className="flex items-center gap-2 rounded-lg border bg-card px-3 py-1.5">
+                <Clock className={cn("h-4 w-4", getTimeColor())} />
+                <span className={cn("text-sm font-mono font-semibold", getTimeColor())}>{formatTime(timeRemaining)}</span>
+              </div>
+
+              {courseId ? (
+                <Button variant="outline" size="sm" onClick={() => navigate(isExamTeacherReview ? `/courses/${courseId}/exams/${examId}/submissions` : `/courses/${courseId}/exams/${examId}`)}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+              ) : null}
+
+              {!isExamTeacherReview ? (
+                <Button size="sm" onClick={() => void handleFinishIdeExam(false)} disabled={isFinishingExam}>
+                  {isFinishingExam ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  Finish Exam
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
         {assignmentId ? (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border bg-card px-3 py-2">
             <div className="min-w-0">
@@ -1260,6 +1701,18 @@ export default function IdePage() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {isTeacherReviewContext ? (
+                          <div className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1">
+                            <Switch
+                              id="teacher-ide-ai-toggle"
+                              checked={enableTeacherAI}
+                              onCheckedChange={setEnableTeacherAI}
+                            />
+                            <Label htmlFor="teacher-ide-ai-toggle" className="text-xs text-muted-foreground">
+                              AI Report
+                            </Label>
+                          </div>
+                        ) : null}
                         <Select value={selectedLanguageId} onValueChange={(value) => setSelectedLanguageId(value as ExecutionRequest["lang"])}>
                           <SelectTrigger className="w-[160px]">
                             <SelectValue placeholder="Language" />
@@ -1380,6 +1833,70 @@ export default function IdePage() {
                           placeholder={stdinMode === "manual" ? "Type stdin values here..." : "Select an uploaded file to use as stdin"}
                           className="h-full min-h-[120px] resize-none border-green-800/70 bg-black text-xs leading-5 text-green-300 placeholder:text-green-700"
                         />
+
+                        {isTeacherReviewContext && enableTeacherAI ? (
+                          <div className="rounded-md border border-blue-600/40 bg-blue-950/20 p-3 text-blue-100">
+                            <div className="mb-2 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Brain className="h-4 w-4 text-blue-300" />
+                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">AI IDE Report</p>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 border-blue-500/50 bg-transparent px-2 text-[11px] text-blue-100 hover:bg-blue-900/50"
+                                onClick={generateTeacherIdeAIReport}
+                                disabled={teacherAILoading}
+                              >
+                                <RefreshCw className={cn("mr-1.5 h-3 w-3", teacherAILoading && "animate-spin")} />
+                                Refresh
+                              </Button>
+                            </div>
+
+                            {teacherAILoading ? (
+                              <p className="text-xs text-blue-200">Generating report from the submitted workspace...</p>
+                            ) : null}
+
+                            {teacherAIError ? (
+                              <div className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-950/40 p-2 text-xs text-red-200">
+                                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <span>{teacherAIError}</span>
+                              </div>
+                            ) : null}
+
+                            {teacherAIReport ? (
+                              <div className="max-h-56 space-y-2 overflow-y-auto pr-1 text-xs text-blue-100">
+                                <p className="font-medium text-blue-50">{teacherAIReport.summary || "AI analysis generated."}</p>
+                                <p><strong>Time:</strong> {teacherAIReport.timeComplexity}</p>
+                                <p><strong>Space:</strong> {teacherAIReport.spaceComplexity}</p>
+
+                                {teacherAIReport.possibleOptimizations?.length > 0 ? (
+                                  <div>
+                                    <p className="mb-1 font-semibold text-blue-200">Optimizations</p>
+                                    <ul className="list-disc space-y-0.5 pl-4">
+                                      {teacherAIReport.possibleOptimizations.slice(0, 4).map((item, index) => (
+                                        <li key={`opt-${index}`}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+
+                                {teacherAIReport.edgeCasesAndBugs?.length > 0 ? (
+                                  <div>
+                                    <p className="mb-1 font-semibold text-blue-200">Potential Issues</p>
+                                    <ul className="list-disc space-y-0.5 pl-4">
+                                      {teacherAIReport.edgeCasesAndBugs.slice(0, 4).map((item, index) => (
+                                        <li key={`bug-${index}`}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+
                         <Button
                           type="button"
                           variant="outline"
@@ -1397,6 +1914,71 @@ export default function IdePage() {
           </PanelGroup>
         </div>
       </div>
+
+      <AlertDialog open={showProctoringSetup} onOpenChange={setShowProctoringSetup}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Proctoring Setup Required</AlertDialogTitle>
+            <AlertDialogDescription>
+              This exam requires proctoring. Enable camera, microphone, and fullscreen to continue.
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  <Camera className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">Camera Access</div>
+                    <div className="text-xs text-muted-foreground">Required throughout the exam.</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  <Mic className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">Microphone Access</div>
+                    <div className="text-xs text-muted-foreground">Required throughout the exam.</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border p-3">
+                  <Maximize className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <div className="font-medium">Fullscreen Mode</div>
+                    <div className="text-xs text-muted-foreground">Exiting fullscreen triggers a warning.</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-lg border border-yellow-500 bg-yellow-50 p-3 dark:bg-yellow-950">
+                  <ShieldAlert className="h-5 w-5 text-yellow-600" />
+                  <div>
+                    <div className="font-medium text-yellow-900 dark:text-yellow-100">Anti-Cheating Measures</div>
+                    <div className="text-xs text-yellow-700 dark:text-yellow-300">
+                      Tab switch and fullscreen exits are tracked. At 3 warnings, the exam is auto-submitted.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => courseId && examId ? navigate(`/courses/${courseId}/exams/${examId}`) : navigate('/courses')}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleProctoringSetup()}>
+              Enable Proctoring
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {proctoringState.mediaStream && !isExamTeacherReview ? (
+        <div className="fixed bottom-4 right-4 z-50 overflow-hidden rounded-lg border-2 border-primary shadow-lg">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            className="h-32 w-40 object-cover"
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-black/50 px-2 py-1 text-center text-xs text-white">
+            Camera Active
+          </div>
+        </div>
+      ) : null}
     </BaseLayout>
   )
 }

@@ -37,6 +37,14 @@ export default function ExamDetailsPage() {
   const [timeUntilStart, setTimeUntilStart] = useState<number | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
 
+  const isIdeExam = (examValue: Exam | null) => {
+    if (!examValue) return false
+    const normalizedType = String(examValue.type || "").toUpperCase()
+    const hasIdeFiles = Array.isArray(examValue.ideFiles) && examValue.ideFiles.length > 0
+    const hasNoDsaProblems = !Array.isArray(examValue.problems) || examValue.problems.length === 0
+    return normalizedType === "IDE" || hasIdeFiles || hasNoDsaProblems
+  }
+
   useEffect(() => {
     if (examId) {
       fetchExamDetails()
@@ -108,12 +116,26 @@ export default function ExamDetailsPage() {
   const handleStartExam = async () => {
     try {
       await assignmentService.startExam(examId)
+
+      // Re-fetch exam metadata after start so routing uses the freshest mode.
+      // This avoids stale local state deciding DSA route for IDE exams.
+      let routeExam = exam
+      try {
+        const refreshedExam = await assignmentService.getExamById(examId)
+        routeExam = refreshedExam
+        setExam(refreshedExam)
+      } catch {
+        // Keep existing exam state if refresh fails; start already succeeded.
+      }
+
       toast({
         title: "Exam Started",
         description: "Good luck! The timer has started.",
       })
-      // Navigate to exam taking page
-      navigate(`/courses/${courseId}/exams/${examId}/take`)
+      const targetPath = isIdeExam(routeExam)
+        ? `/ide?courseId=${courseId}&examId=${examId}`
+        : `/courses/${courseId}/exams/${examId}/take`
+      navigate(targetPath)
     } catch (error: any) {
       toast({
         title: "Error",
@@ -333,7 +355,14 @@ export default function ExamDetailsPage() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-center">
-                    <Button size="lg" onClick={() => navigate(`/courses/${courseId}/exams/${examId}/take`)}>
+                    <Button
+                      size="lg"
+                      onClick={() => navigate(
+                        isIdeExam(exam)
+                          ? `/ide?courseId=${courseId}&examId=${examId}`
+                          : `/courses/${courseId}/exams/${examId}/take`
+                      )}
+                    >
                       <Play className="mr-2 h-4 w-4" />
                       Continue Exam
                     </Button>
