@@ -79,9 +79,9 @@ type NewNodeType = "file" | "folder"
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg"])
 const BINARY_PREVIEW_EXTENSIONS = new Set(["png", "jpg", "jpeg", "pdf"])
-const MAX_INLINE_EXECUTION_PAYLOAD_BYTES = 80 * 1024
-const MAX_RUNTIME_FILE_BYTES = 16 * 1024
-const MAX_RUNTIME_TOTAL_BYTES = 48 * 1024
+const MAX_RUNTIME_FILE_BYTES = 1024 * 1024
+const MAX_RUNTIME_REFERENCED_FILE_BYTES = 1024 * 1024
+const MAX_RUNTIME_TOTAL_BYTES = 5 * 1024 * 1024
 const AI_SUPPORTED_EXTENSIONS = new Set([
   "py",
   "cpp",
@@ -431,22 +431,8 @@ const findFolderIdByPath = (nodes: TreeNode[], folderPath: string): string | nul
   return found?.id || null
 }
 
-const buildPythonRuntimeSource = (
-  sourceCode: string,
-  selectedFilePath: string,
-  runtimeFiles: Array<{ path: string; content: string }>
-): string => {
-  const filesJson = JSON.stringify(runtimeFiles)
-  const selectedPathJson = JSON.stringify(selectedFilePath)
-
+const buildPythonRuntimeSource = (sourceCode: string): string => {
   return [
-    "from pathlib import Path as _Path",
-    `__codexa_files = ${filesJson}`,
-    "for _f in __codexa_files:",
-    "    _p = _Path(_f['path'])",
-    "    _p.parent.mkdir(parents=True, exist_ok=True)",
-    "    _p.write_text(_f['content'], encoding='utf-8')",
-    `__codexa_main = _Path(${selectedPathJson})`,
     "try:",
     "    import matplotlib",
     "    matplotlib.use('Agg')",
@@ -468,16 +454,27 @@ const buildPythonRuntimeSource = (
   ].join("\n")
 }
 
+const isReferencedRuntimeFile = (sourceCode: string, path: string): boolean => {
+  const normalizedSource = sourceCode.replace(/\r\n/g, "\n")
+  const normalizedPath = path.replace(/\\/g, "/")
+  const fileName = normalizedPath.split("/").pop() || normalizedPath
+
+  return [normalizedPath, `./${normalizedPath}`, `../${normalizedPath}`, fileName].some(
+    (token) => token.length > 0 && normalizedSource.includes(token)
+  )
+}
+
 const preparePythonRuntimeFiles = (
   files: FileEntry[],
   selectedFileId: string,
   selectedFilePath: string,
-  contentById: Record<string, string>
+  contentById: Record<string, string>,
+  sourceCode: string
 ): Array<{ path: string; content: string }> => {
   const encoder = new TextEncoder()
   let totalBytes = 0
 
-  const shouldIncludeRuntimeFile = (path: string, content: string) => {
+  const shouldIncludeRuntimeFile = (path: string, content: string, forceInclude = false) => {
     if (isBinaryPreviewFile(path)) {
       return false
     }
@@ -487,7 +484,8 @@ const preparePythonRuntimeFiles = (
     }
 
     const fileBytes = encoder.encode(content).length
-    if (fileBytes === 0 || fileBytes > MAX_RUNTIME_FILE_BYTES) {
+    const maxFileBytes = forceInclude ? MAX_RUNTIME_REFERENCED_FILE_BYTES : MAX_RUNTIME_FILE_BYTES
+    if (fileBytes === 0 || fileBytes > maxFileBytes) {
       return false
     }
 
@@ -505,7 +503,7 @@ const preparePythonRuntimeFiles = (
       path: file.path,
       content: contentById[file.id] || "",
     }))
-    .filter((file) => shouldIncludeRuntimeFile(file.path, file.content))
+    .filter((file) => shouldIncludeRuntimeFile(file.path, file.content, isReferencedRuntimeFile(sourceCode, file.path)))
 
   const selectedTopFolder = selectedFilePath.split("/")[0]
   if (!selectedTopFolder || !selectedFilePath.includes("/")) {
@@ -1469,18 +1467,16 @@ export default function IdePage() {
 
     let sourceToExecute = userSource
     let pythonRuntimeFileCount = 0
-    let usedInlineRuntimeSource = false
+    let runtimeFiles: ExecutionArtifact[] = []
     if (selectedLanguageId === "python3") {
-      const runtimeFiles = preparePythonRuntimeFiles(allFiles, selectedFileNode.id, selectedFilePath, fileContents)
-      pythonRuntimeFileCount = runtimeFiles.length
-
-      const inlineSource = buildPythonRuntimeSource(userSource, selectedFilePath, runtimeFiles)
-      const inlineSourceBytes = new TextEncoder().encode(inlineSource).length
-
-      if (inlineSourceBytes <= MAX_INLINE_EXECUTION_PAYLOAD_BYTES) {
-        sourceToExecute = inlineSource
-        usedInlineRuntimeSource = true
-      }
+      const preparedRuntimeFiles = preparePythonRuntimeFiles(allFiles, selectedFileNode.id, selectedFilePath, fileContents, userSource)
+      pythonRuntimeFileCount = preparedRuntimeFiles.length
+      runtimeFiles = preparedRuntimeFiles.map((file) => ({
+        path: file.path,
+        content: file.content,
+        encoding: "utf8",
+      }))
+      sourceToExecute = buildPythonRuntimeSource(userSource)
     }
 
     try {
@@ -1489,10 +1485,7 @@ export default function IdePage() {
       appendTerminalLine(`$ run ${selectedFileNode.name} [${selectedLanguage.label}]`)
       appendTerminalLine(`stdin source: ${stdinMode === "file" ? "file" : "manual"}`)
       if (selectedLanguageId === "python3") {
-        appendTerminalLine(`runtime files mounted: ${usedInlineRuntimeSource ? pythonRuntimeFileCount : 0}`)
-        if (!usedInlineRuntimeSource && pythonRuntimeFileCount > 0) {
-          appendTerminalLine("runtime files skipped to fit execution payload limit")
-        }
+        appendTerminalLine(`runtime files mounted: ${pythonRuntimeFileCount}`)
       }
 
       const resultUrl = await submitExecution({
@@ -1500,6 +1493,7 @@ export default function IdePage() {
         stdin: executionStdin,
         lang: selectedLanguageId,
         timeout: 120,
+        runtimeFiles,
       })
 
       setRunStatus("Running")

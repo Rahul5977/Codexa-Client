@@ -8,6 +8,7 @@ export interface ExecutionRequest {
   stdin: string
   lang: "python3" | "cpp" | "c" | "java" | "openJDK-8"
   timeout: number
+  runtimeFiles?: ExecutionArtifact[]
 }
 
 export interface ExecutionResult {
