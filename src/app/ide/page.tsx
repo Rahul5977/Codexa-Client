@@ -79,6 +79,9 @@ type NewNodeType = "file" | "folder"
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg"])
 const BINARY_PREVIEW_EXTENSIONS = new Set(["png", "jpg", "jpeg", "pdf"])
+const MAX_INLINE_EXECUTION_PAYLOAD_BYTES = 80 * 1024
+const MAX_RUNTIME_FILE_BYTES = 16 * 1024
+const MAX_RUNTIME_TOTAL_BYTES = 48 * 1024
 const AI_SUPPORTED_EXTENSIONS = new Set([
   "py",
   "cpp",
@@ -471,12 +474,38 @@ const preparePythonRuntimeFiles = (
   selectedFilePath: string,
   contentById: Record<string, string>
 ): Array<{ path: string; content: string }> => {
+  const encoder = new TextEncoder()
+  let totalBytes = 0
+
+  const shouldIncludeRuntimeFile = (path: string, content: string) => {
+    if (isBinaryPreviewFile(path)) {
+      return false
+    }
+
+    if (content.startsWith("data:")) {
+      return false
+    }
+
+    const fileBytes = encoder.encode(content).length
+    if (fileBytes === 0 || fileBytes > MAX_RUNTIME_FILE_BYTES) {
+      return false
+    }
+
+    if (totalBytes + fileBytes > MAX_RUNTIME_TOTAL_BYTES) {
+      return false
+    }
+
+    totalBytes += fileBytes
+    return true
+  }
+
   const baseFiles = files
     .filter((file) => file.id !== selectedFileId)
     .map((file) => ({
       path: file.path,
       content: contentById[file.id] || "",
     }))
+    .filter((file) => shouldIncludeRuntimeFile(file.path, file.content))
 
   const selectedTopFolder = selectedFilePath.split("/")[0]
   if (!selectedTopFolder || !selectedFilePath.includes("/")) {
@@ -1440,11 +1469,18 @@ export default function IdePage() {
 
     let sourceToExecute = userSource
     let pythonRuntimeFileCount = 0
+    let usedInlineRuntimeSource = false
     if (selectedLanguageId === "python3") {
       const runtimeFiles = preparePythonRuntimeFiles(allFiles, selectedFileNode.id, selectedFilePath, fileContents)
       pythonRuntimeFileCount = runtimeFiles.length
 
-      sourceToExecute = buildPythonRuntimeSource(userSource, selectedFilePath, runtimeFiles)
+      const inlineSource = buildPythonRuntimeSource(userSource, selectedFilePath, runtimeFiles)
+      const inlineSourceBytes = new TextEncoder().encode(inlineSource).length
+
+      if (inlineSourceBytes <= MAX_INLINE_EXECUTION_PAYLOAD_BYTES) {
+        sourceToExecute = inlineSource
+        usedInlineRuntimeSource = true
+      }
     }
 
     try {
@@ -1453,7 +1489,10 @@ export default function IdePage() {
       appendTerminalLine(`$ run ${selectedFileNode.name} [${selectedLanguage.label}]`)
       appendTerminalLine(`stdin source: ${stdinMode === "file" ? "file" : "manual"}`)
       if (selectedLanguageId === "python3") {
-        appendTerminalLine(`runtime files mounted: ${pythonRuntimeFileCount}`)
+        appendTerminalLine(`runtime files mounted: ${usedInlineRuntimeSource ? pythonRuntimeFileCount : 0}`)
+        if (!usedInlineRuntimeSource && pythonRuntimeFileCount > 0) {
+          appendTerminalLine("runtime files skipped to fit execution payload limit")
+        }
       }
 
       const resultUrl = await submitExecution({
