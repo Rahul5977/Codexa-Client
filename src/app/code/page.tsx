@@ -11,7 +11,7 @@ import { ProblemStatement } from "./components/problem-statement"
 import { CodeEditor } from "./components/code-editor"
 import { TestCases } from "./components/test-cases"
 import { SubmissionDetails } from "./components/submission-details"
-import { Code2, TestTube, Play, Square, Zap, Plus, FileText, History, ArrowLeft, Save } from "lucide-react"
+import { Code2, TestTube, Play, Square, Zap, Plus, FileText, History, ArrowLeft, Save, Brain, RefreshCw, AlertCircle } from "lucide-react"
 import { BaseLayout } from "@/components/layouts/base-layout"
 import { PanelResizeHandle, PanelGroup, Panel } from "react-resizable-panels"
 import { cn } from "@/lib/utils"
@@ -846,29 +846,82 @@ export default function CodePage() {
                   <TabsContent value="testcases" className={cn("flex-1 m-0", rightPanelSize < 40 ? "overflow-auto" : "overflow-hidden")}>
                     <div className="h-full flex flex-col">
                       {studentId && enableTeacherAI && (teacherAILoading || teacherAIReport || teacherAIError) && (
-                        <div className="border-b border-border/50 p-4 bg-muted/10 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-sm font-semibold">AI Efficiency Report</h3>
-                            {teacherAILoading && <span className="text-xs text-muted-foreground">Generating...</span>}
+                        <div className="border-b border-border/50 bg-linear-to-r from-sky-50/40 via-background to-cyan-50/30 p-4 dark:from-sky-950/10 dark:to-cyan-950/10">
+                          <div className="rounded-xl border border-sky-200/70 bg-linear-to-br from-sky-100 via-cyan-50 to-blue-50 p-4 shadow-sm dark:border-sky-800/60 dark:from-sky-950/60 dark:via-cyan-950/20 dark:to-blue-950/20">
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <div className="rounded-md bg-sky-600 p-1.5 text-white dark:bg-sky-500">
+                                  <Brain className="h-3.5 w-3.5" />
+                                </div>
+                                <div>
+                                  <h3 className="text-sm font-semibold text-sky-900 dark:text-sky-100">AI Efficiency Report</h3>
+                                  <p className="text-[11px] text-sky-700/80 dark:text-sky-300/80">Generated for teacher review</p>
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void handleRunAllTestCases()}
+                                disabled={isRunning || teacherAILoading || !teacherTestCases}
+                                className="h-7 border-sky-300 bg-white/80 px-2 text-[11px] text-sky-900 hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950/60 dark:text-sky-100"
+                              >
+                                <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", (isRunning || teacherAILoading) && "animate-spin")} />
+                                Refresh
+                              </Button>
+                            </div>
+
+                            {teacherAILoading ? (
+                              <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-2.5 text-xs text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">
+                                Generating report from latest all-test execution...
+                              </div>
+                            ) : null}
+
+                            {teacherAIError ? (
+                              <div className="flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-50 p-2.5 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-200">
+                                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                                <span>{teacherAIError}</span>
+                              </div>
+                            ) : null}
+
+                            {teacherAIReport ? (
+                              <div className="space-y-2.5 text-xs">
+                                <div className="rounded-lg border border-border/70 bg-background/85 p-3">
+                                  <p className="font-medium leading-5 text-foreground">{teacherAIReport.summary || "AI analysis generated."}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="rounded-lg border border-emerald-200/70 bg-emerald-50/60 p-2 dark:border-emerald-900 dark:bg-emerald-950/30">
+                                    <p className="text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Time</p>
+                                    <p className="mt-1 text-foreground">{teacherAIReport.timeComplexity || "N/A"}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-orange-200/70 bg-orange-50/60 p-2 dark:border-orange-900 dark:bg-orange-950/30">
+                                    <p className="text-[11px] uppercase tracking-wide text-orange-700 dark:text-orange-300">Space</p>
+                                    <p className="mt-1 text-foreground">{teacherAIReport.spaceComplexity || "N/A"}</p>
+                                  </div>
+                                  <div className="rounded-lg border border-cyan-200/70 bg-cyan-50/60 p-2 dark:border-cyan-900 dark:bg-cyan-950/30">
+                                    <p className="text-[11px] uppercase tracking-wide text-cyan-700 dark:text-cyan-300">Runtime</p>
+                                    <p className="mt-1 text-foreground">{teacherAIReport.executionTimeMs.toFixed(2)} ms</p>
+                                  </div>
+                                  <div className="rounded-lg border border-indigo-200/70 bg-indigo-50/60 p-2 dark:border-indigo-900 dark:bg-indigo-950/30">
+                                    <p className="text-[11px] uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Memory</p>
+                                    <p className="mt-1 text-foreground">{(teacherAIReport.memoryKb / 1024).toFixed(2)} MB</p>
+                                  </div>
+                                </div>
+
+                                {teacherAIReport.possibleOptimizations?.length > 0 ? (
+                                  <div className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 p-3 dark:border-indigo-900 dark:bg-indigo-950/20">
+                                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Optimizations</p>
+                                    <ul className="list-disc space-y-1 pl-4 leading-5 text-muted-foreground">
+                                      {teacherAIReport.possibleOptimizations.slice(0, 4).map((item, index) => (
+                                        <li key={`teacher-opt-${index}`}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
-
-                          {teacherAIError && (
-                            <p className="text-xs text-red-500">{teacherAIError}</p>
-                          )}
-
-                          {teacherAIReport && (
-                            <Card>
-                              <CardHeader className="pb-2">
-                                <CardTitle className="text-sm">{teacherAIReport.summary || "AI Analysis"}</CardTitle>
-                              </CardHeader>
-                              <CardContent className="space-y-2 text-xs">
-                                <p><strong>Time Complexity:</strong> {teacherAIReport.timeComplexity}</p>
-                                <p><strong>Space Complexity:</strong> {teacherAIReport.spaceComplexity}</p>
-                                <p><strong>Runtime:</strong> {teacherAIReport.executionTimeMs.toFixed(2)}ms</p>
-                                <p><strong>Memory:</strong> {(teacherAIReport.memoryKb / 1024).toFixed(2)}MB</p>
-                              </CardContent>
-                            </Card>
-                          )}
                         </div>
                       )}
 

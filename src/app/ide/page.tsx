@@ -643,11 +643,11 @@ export default function IdePage() {
   const [assignmentSubmitted, setAssignmentSubmitted] = useState(false)
   const [assignmentViewOnly, setAssignmentViewOnly] = useState(false)
   const [assignmentTitle, setAssignmentTitle] = useState<string | null>(null)
-  const [isTeacherReviewContext, setIsTeacherReviewContext] = useState(false)
-  const [enableTeacherAI, setEnableTeacherAI] = useState(false)
-  const [teacherAIReport, setTeacherAIReport] = useState<AIAnalysisReport | null>(null)
-  const [teacherAIError, setTeacherAIError] = useState<string | null>(null)
-  const [teacherAILoading, setTeacherAILoading] = useState(false)
+  const [, setIsTeacherReviewContext] = useState(false)
+  const [enableAIAnalytics, setEnableAIAnalytics] = useState(false)
+  const [aiAnalysisReport, setAiAnalysisReport] = useState<AIAnalysisReport | null>(null)
+  const [aiAnalysisError, setAiAnalysisError] = useState<string | null>(null)
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false)
   const [exam, setExam] = useState<Exam | null>(null)
   const [examSubmission, setExamSubmission] = useState<ExamSubmission | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
@@ -949,9 +949,8 @@ export default function IdePage() {
           setExamSubmission(submissionData)
           setAssignmentTitle(examData.title)
           setIsTeacherReviewContext(false)
-          setEnableTeacherAI(false)
-          setTeacherAIReport(null)
-          setTeacherAIError(null)
+          setAiAnalysisReport(null)
+          setAiAnalysisError(null)
           setAssignmentSubmitted(false)
           setAssignmentViewOnly(isExamTeacherReview || queryViewOnly)
 
@@ -979,9 +978,8 @@ export default function IdePage() {
         }
 
         setIsTeacherReviewContext(false)
-        setEnableTeacherAI(false)
-        setTeacherAIReport(null)
-        setTeacherAIError(null)
+        setAiAnalysisReport(null)
+        setAiAnalysisError(null)
         setExam(null)
         setExamSubmission(null)
         setTimeRemaining(0)
@@ -1032,56 +1030,56 @@ export default function IdePage() {
     }
   }, [applyWorkspace, authLoading, assignmentId, courseId, examId, isExamTeacherReview, navigate, studentId, user?.id, queryViewOnly])
 
-  const generateTeacherIdeAIReport = useCallback(async () => {
-    if (!isTeacherReviewContext) {
+  const generateIdeAIReport = useCallback(async () => {
+    if (!enableAIAnalytics) {
       return
     }
 
     const snapshot = buildAIWorkspaceSnapshot(allFiles, fileContents)
     if (!snapshot.trim()) {
-      setTeacherAIError("No analyzable code files were found in this IDE workspace.")
-      setTeacherAIReport(null)
+      setAiAnalysisError("No analyzable code files were found in this IDE workspace.")
+      setAiAnalysisReport(null)
       return
     }
 
     try {
-      setTeacherAILoading(true)
-      setTeacherAIError(null)
+      setAiAnalysisLoading(true)
+      setAiAnalysisError(null)
 
       const report = await generateCustomAIAnalysis({
         code: snapshot,
         language: LANGUAGE_TO_AI_LABEL[selectedLanguageId] || "plaintext",
-        status: "SUBMITTED",
+        status: "IN_PROGRESS",
         executionTimeMs: 0,
         memoryKb: 0,
-        problemTitle: assignmentTitle || "IDE Assignment",
+        problemTitle: assignmentTitle || selectedFileNode?.name || "IDE Workspace",
         difficulty: "CLASSROOM",
       })
 
-      setTeacherAIReport(report)
+      setAiAnalysisReport(report)
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to generate AI report"
-      setTeacherAIError(message)
-      setTeacherAIReport(null)
+      setAiAnalysisError(message)
+      setAiAnalysisReport(null)
     } finally {
-      setTeacherAILoading(false)
+      setAiAnalysisLoading(false)
     }
-  }, [allFiles, assignmentTitle, fileContents, isTeacherReviewContext, selectedLanguageId])
+  }, [allFiles, assignmentTitle, enableAIAnalytics, fileContents, selectedFileNode?.name, selectedLanguageId])
 
   useEffect(() => {
-    if (!enableTeacherAI) {
-      setTeacherAIReport(null)
-      setTeacherAIError(null)
-      setTeacherAILoading(false)
+    if (!enableAIAnalytics) {
+      setAiAnalysisReport(null)
+      setAiAnalysisError(null)
+      setAiAnalysisLoading(false)
       return
     }
 
-    if (!isTeacherReviewContext || !isWorkspaceReady) {
+    if (!isWorkspaceReady) {
       return
     }
 
-    generateTeacherIdeAIReport()
-  }, [enableTeacherAI, generateTeacherIdeAIReport, isTeacherReviewContext, isWorkspaceReady])
+    generateIdeAIReport()
+  }, [enableAIAnalytics, generateIdeAIReport, isWorkspaceReady])
 
   useEffect(() => {
     if (!isWorkspaceReady || !user?.id || assignmentViewOnly) {
@@ -1560,6 +1558,10 @@ export default function IdePage() {
         appendTerminalLine(`stderr: ${result.stderr.trimEnd()}`)
       }
       appendTerminalLine("--------------------------------")
+
+      if (enableAIAnalytics) {
+        void generateIdeAIReport()
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Execution failed"
       setRunStatus("Failed")
@@ -1578,6 +1580,8 @@ export default function IdePage() {
     selectedStdinFileContent,
     stdin,
     stdinMode,
+    enableAIAnalytics,
+    generateIdeAIReport,
     tree,
   ])
 
@@ -1791,18 +1795,16 @@ export default function IdePage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {isTeacherReviewContext ? (
-                          <div className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1">
-                            <Switch
-                              id="teacher-ide-ai-toggle"
-                              checked={enableTeacherAI}
-                              onCheckedChange={setEnableTeacherAI}
-                            />
-                            <Label htmlFor="teacher-ide-ai-toggle" className="text-xs text-muted-foreground">
-                              AI Report
-                            </Label>
-                          </div>
-                        ) : null}
+                        <div className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1">
+                          <Switch
+                            id="ide-ai-toggle"
+                            checked={enableAIAnalytics}
+                            onCheckedChange={setEnableAIAnalytics}
+                          />
+                          <Label htmlFor="ide-ai-toggle" className="text-xs text-muted-foreground">
+                            AI Analysis
+                          </Label>
+                        </div>
                         <Select value={selectedLanguageId} onValueChange={(value) => setSelectedLanguageId(value as ExecutionRequest["lang"])}>
                           <SelectTrigger className="w-[160px]">
                             <SelectValue placeholder="Language" />
@@ -1924,69 +1926,6 @@ export default function IdePage() {
                           className="h-full min-h-[120px] resize-none border-green-800/70 bg-black text-xs leading-5 text-green-300 placeholder:text-green-700"
                         />
 
-                        {isTeacherReviewContext && enableTeacherAI ? (
-                          <div className="rounded-md border border-blue-600/40 bg-blue-950/20 p-3 text-blue-100">
-                            <div className="mb-2 flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <Brain className="h-4 w-4 text-blue-300" />
-                                <p className="text-xs font-semibold uppercase tracking-wide text-blue-200">AI IDE Report</p>
-                              </div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 border-blue-500/50 bg-transparent px-2 text-[11px] text-blue-100 hover:bg-blue-900/50"
-                                onClick={generateTeacherIdeAIReport}
-                                disabled={teacherAILoading}
-                              >
-                                <RefreshCw className={cn("mr-1.5 h-3 w-3", teacherAILoading && "animate-spin")} />
-                                Refresh
-                              </Button>
-                            </div>
-
-                            {teacherAILoading ? (
-                              <p className="text-xs text-blue-200">Generating report from the submitted workspace...</p>
-                            ) : null}
-
-                            {teacherAIError ? (
-                              <div className="flex items-start gap-2 rounded-md border border-red-500/40 bg-red-950/40 p-2 text-xs text-red-200">
-                                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                                <span>{teacherAIError}</span>
-                              </div>
-                            ) : null}
-
-                            {teacherAIReport ? (
-                              <div className="max-h-56 space-y-2 overflow-y-auto pr-1 text-xs text-blue-100">
-                                <p className="font-medium text-blue-50">{teacherAIReport.summary || "AI analysis generated."}</p>
-                                <p><strong>Time:</strong> {teacherAIReport.timeComplexity}</p>
-                                <p><strong>Space:</strong> {teacherAIReport.spaceComplexity}</p>
-
-                                {teacherAIReport.possibleOptimizations?.length > 0 ? (
-                                  <div>
-                                    <p className="mb-1 font-semibold text-blue-200">Optimizations</p>
-                                    <ul className="list-disc space-y-0.5 pl-4">
-                                      {teacherAIReport.possibleOptimizations.slice(0, 4).map((item, index) => (
-                                        <li key={`opt-${index}`}>{item}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                ) : null}
-
-                                {teacherAIReport.edgeCasesAndBugs?.length > 0 ? (
-                                  <div>
-                                    <p className="mb-1 font-semibold text-blue-200">Potential Issues</p>
-                                    <ul className="list-disc space-y-0.5 pl-4">
-                                      {teacherAIReport.edgeCasesAndBugs.slice(0, 4).map((item, index) => (
-                                        <li key={`bug-${index}`}>{item}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-
                         <Button
                           type="button"
                           variant="outline"
@@ -2001,6 +1940,127 @@ export default function IdePage() {
                 </Panel>
               </PanelGroup>
             </Panel>
+
+            {enableAIAnalytics ? (
+              <>
+                <PanelResizeHandle className="w-1 bg-border/60 hover:bg-primary/60" />
+
+                <Panel defaultSize={24} minSize={18}>
+                  <div className="flex h-full min-h-0 flex-col border-l bg-linear-to-b from-sky-50/40 via-background to-background dark:from-sky-950/20">
+                    <div className="border-b border-border/70 bg-background/70 p-3 backdrop-blur-sm">
+                      <div className="rounded-xl border border-sky-200/70 bg-linear-to-br from-sky-100 via-cyan-50 to-blue-50 p-3 shadow-sm dark:border-sky-800/70 dark:from-sky-950/60 dark:via-cyan-950/20 dark:to-blue-950/30">
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="rounded-md bg-sky-600 p-1.5 text-white dark:bg-sky-500">
+                              <Brain className="h-3.5 w-3.5" />
+                            </div>
+                            <div>
+                              <h3 className="text-xs font-semibold tracking-wide text-sky-900 uppercase dark:text-sky-100">AI Analysis</h3>
+                              <p className="text-[11px] text-sky-700/80 dark:text-sky-200/80">
+                                {selectedFileNode ? `Target: ${selectedFileNode.name}` : "Select a file to generate analysis."}
+                              </p>
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 border-sky-300 bg-white/80 px-2 text-xs text-sky-900 hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950/60 dark:text-sky-100 dark:hover:bg-sky-900"
+                            onClick={() => void generateIdeAIReport()}
+                            disabled={aiAnalysisLoading}
+                          >
+                            <RefreshCw className={cn("mr-1.5 h-3.5 w-3.5", aiAnalysisLoading && "animate-spin")} />
+                            Refresh
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ScrollArea className="h-full min-h-0">
+                      <div className="space-y-3 p-3">
+                        {aiAnalysisLoading ? (
+                          <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3 text-xs text-sky-900 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-100">
+                            Generating AI analysis for your workspace...
+                          </div>
+                        ) : null}
+
+                        {aiAnalysisError ? (
+                          <div className="flex items-start gap-2 rounded-xl border border-red-500/40 bg-red-50 p-3 text-xs text-red-700 dark:bg-red-950/40 dark:text-red-200">
+                            <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>{aiAnalysisError}</span>
+                          </div>
+                        ) : null}
+
+                        {!aiAnalysisLoading && !aiAnalysisError && !aiAnalysisReport ? (
+                          <div className="rounded-xl border border-border/70 bg-card p-3 text-xs text-muted-foreground shadow-xs">
+                            Toggle enabled. Click Refresh or run your code to generate analysis.
+                          </div>
+                        ) : null}
+
+                        {aiAnalysisReport ? (
+                          <div className="space-y-3 text-xs">
+                            <div className="rounded-xl border border-border/70 bg-card p-3 shadow-xs">
+                              <p className="font-medium leading-5 text-foreground">{aiAnalysisReport.summary || "AI analysis generated."}</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/60 p-2.5 dark:border-emerald-900 dark:bg-emerald-950/30">
+                                <p className="text-[11px] uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Time</p>
+                                <p className="mt-1 text-foreground">{aiAnalysisReport.timeComplexity || "N/A"}</p>
+                              </div>
+                              <div className="rounded-xl border border-orange-200/70 bg-orange-50/60 p-2.5 dark:border-orange-900 dark:bg-orange-950/30">
+                                <p className="text-[11px] uppercase tracking-wide text-orange-700 dark:text-orange-300">Space</p>
+                                <p className="mt-1 text-foreground">{aiAnalysisReport.spaceComplexity || "N/A"}</p>
+                              </div>
+                            </div>
+
+                            {aiAnalysisReport.algorithmExplanation ? (
+                              <div className="rounded-xl border border-border/70 bg-card p-3 shadow-xs">
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Algorithm Insight</p>
+                                <p className="leading-5 text-muted-foreground">{aiAnalysisReport.algorithmExplanation}</p>
+                              </div>
+                            ) : null}
+
+                            {aiAnalysisReport.possibleOptimizations?.length > 0 ? (
+                              <div className="rounded-xl border border-indigo-200/70 bg-indigo-50/40 p-3 shadow-xs dark:border-indigo-900 dark:bg-indigo-950/20">
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Optimizations</p>
+                                <ul className="list-disc space-y-1 pl-4 leading-5 text-muted-foreground">
+                                  {aiAnalysisReport.possibleOptimizations.slice(0, 6).map((item, index) => (
+                                    <li key={`opt-${index}`}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {aiAnalysisReport.edgeCasesAndBugs?.length > 0 ? (
+                              <div className="rounded-xl border border-rose-200/70 bg-rose-50/40 p-3 shadow-xs dark:border-rose-900 dark:bg-rose-950/20">
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">Potential Issues</p>
+                                <ul className="list-disc space-y-1 pl-4 leading-5 text-muted-foreground">
+                                  {aiAnalysisReport.edgeCasesAndBugs.slice(0, 6).map((item, index) => (
+                                    <li key={`bug-${index}`}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+
+                            {aiAnalysisReport.codeQualityFeedback?.length > 0 ? (
+                              <div className="rounded-xl border border-violet-200/70 bg-violet-50/40 p-3 shadow-xs dark:border-violet-900 dark:bg-violet-950/20">
+                                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">Code Quality</p>
+                                <ul className="list-disc space-y-1 pl-4 leading-5 text-muted-foreground">
+                                  {aiAnalysisReport.codeQualityFeedback.slice(0, 6).map((item, index) => (
+                                    <li key={`quality-${index}`}>{item}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </Panel>
+              </>
+            ) : null}
           </PanelGroup>
         </div>
       </div>
