@@ -13,6 +13,7 @@ const Analytics = lazy(() => import('@/app/analytics/page'))
 const AdminCreateProblem = lazy(() => import('@/app/admin/create-problem/page'))
 const Users = lazy(() => import('@/app/users/page'))
 const UserProfileView = lazy(() => import('@/app/users/profile-view/page'))
+const CommunityRoomPage = lazy(() => import('@/app/community/rooms/[roomId]/page'))
 const FAQs = lazy(() => import('@/app/faqs/page'))
 const CodePage = lazy(() => import('@/app/code/page'))
 const IdePage = lazy(() => import('@/app/ide/page'))
@@ -157,6 +158,10 @@ export const routes: RouteConfig[] = [
   {
     path: "/users/:userId",
     element: <ProtectedRoute><UserProfileView /></ProtectedRoute>
+  },
+  {
+    path: "/community/rooms/:roomId",
+    element: <ProtectedRoute><CommunityRoomPage /></ProtectedRoute>
   },
   {
     path: "/faqs",

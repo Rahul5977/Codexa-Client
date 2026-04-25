@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardTitle } from "@/components/ui/card"
 import { ProblemStatement } from "./components/problem-statement"
 import { CodeEditor } from "./components/code-editor"
 import { TestCases } from "./components/test-cases"
@@ -42,6 +42,7 @@ export default function CodePage() {
   const assignmentId = searchParams.get('assignment')
   const examId = searchParams.get('exam')
   const courseId = searchParams.get('course')
+  const roomId = searchParams.get('roomId') // Detect if in contest mode
   const viewSubmission = searchParams.get('viewSubmission') === 'true'
   const viewOnly = searchParams.get('viewOnly') === 'true' // For locked assignments
   const studentId = searchParams.get('studentId') // For teachers viewing student code
@@ -92,6 +93,7 @@ export default function CodePage() {
   // Check if this is an assignment context or exam context
   const isAssignmentContext = Boolean(assignmentId && courseId)
   const isExamContext = Boolean(examId && courseId)
+  const isContestContext = Boolean(roomId) // Detect contest context
   const isReadOnly = !!studentId || viewOnly || isExamContext // Read-only if teacher viewing, assignment locked, or exam submission
 
   // Load submitted code when viewing a submission
@@ -277,7 +279,7 @@ export default function CodePage() {
     clearSubmission()
 
     setActiveTab("testcases")
-    toast.info(`Running your code against ${problem.examples.length} test case(s)...`)
+    toast.info(`Running your code against ${problem?.examples?.length || 0} test case(s)...`)
 
     try {
       const baseTestCases = (problem?.examples || []).map((example) => ({
@@ -519,6 +521,16 @@ export default function CodePage() {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">No Problem Selected</h2>
           <p className="text-muted-foreground">Please select a problem from the dashboard to start coding.</p>
+          {isContestContext && roomId && (
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={() => navigate(`/community/rooms/${roomId}`)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Contest
+            </Button>
+          )}
         </div>
       </div>
     )
@@ -542,18 +554,20 @@ export default function CodePage() {
             <div className="h-full border rounded-lg border-border/50 flex flex-col bg-linear-to-b from-background to-muted/10 overflow-hidden">
               {leftPanelSize <= 5 ? (
                 <div className="h-full flex flex-col items-center justify-start gap-4 py-3">
-                  <button
-                    onClick={() => setProblemTab("submissions")}
-                    className={cn(
-                      "[writing-mode:vertical-rl] flex gap-2 items-center justify-center rotate-180 rounded-lg transition-all text-sm font-medium",
-                      problemTab === "submissions"
-                        ? "bg-muted p-2 border shadow-lg"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    <History className="h-4 w-4 rotate-90" />
-                    <span className="font-medium">Submissions</span>
-                  </button>
+                  {!isContestContext && (
+                    <button
+                      onClick={() => setProblemTab("submissions")}
+                      className={cn(
+                        "[writing-mode:vertical-rl] flex gap-2 items-center justify-center rotate-180 rounded-lg transition-all text-sm font-medium",
+                        problemTab === "submissions"
+                          ? "bg-muted p-2 border shadow-lg"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <History className="h-4 w-4 rotate-90" />
+                      <span className="font-medium">Submissions</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => setProblemTab("description")}
                     className={cn(
@@ -576,7 +590,7 @@ export default function CodePage() {
                     activeTab={problemTab}
                     onTabChange={setProblemTab}
                     onSubmissionClick={handleSubmissionClick}
-                    hideSubmissionsTab={isAssignmentContext || isExamContext}
+                    hideSubmissionsTab={isAssignmentContext || isExamContext || isContestContext}
                   />
                 </div>
               )}
@@ -754,6 +768,26 @@ export default function CodePage() {
                             <ArrowLeft className="h-3.5 w-3.5 md:mr-1.5" />
                             <span className="hidden md:inline">Back to Grading</span>
                           </Button>
+                        ) : isContestContext && roomId ? (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => navigate(`/community/rooms/${roomId}`)}
+                              variant="outline"
+                              className="h-8 px-2 md:px-4 text-xs font-semibold"
+                            >
+                              <ArrowLeft className="h-3.5 w-3.5 md:mr-1.5" />
+                              <span className="hidden md:inline">Back to Contest</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={handleSubmit}
+                              className="h-8 px-2 md:px-4 text-xs bg-primary text-white shadow-lg shadow-violet-600/20 font-semibold"
+                            >
+                              <Zap className="h-3.5 w-3.5 md:mr-1.5" />
+                              <span className="hidden md:inline">Submit</span>
+                            </Button>
+                          </>
                         ) : !isAssignmentContext ? (
                           <Button
                             size="sm"
@@ -922,6 +956,48 @@ export default function CodePage() {
                               </div>
                             ) : null}
                           </div>
+
+                          {teacherAIError && (
+                            <p className="text-xs text-red-500">{teacherAIError}</p>
+                          )}
+
+                          {teacherAIReport && (
+                            <Card className="border border-border/50 bg-muted/10 rounded-lg shadow-sm overflow-hidden">
+                              <div className="flex">
+                                <div className="w-1 bg-primary dark:from-primary/60" />
+                                <div className="flex-1 p-3">
+                                  <div className="flex items-start justify-between gap-4">
+                                    <div className="min-w-0">
+                                      <CardTitle className="text-sm">{teacherAIReport.summary ? (teacherAIReport.summary.length > 200 ? `${teacherAIReport.summary.slice(0,197)}...` : teacherAIReport.summary) : 'AI Efficiency Report'}</CardTitle>
+                                      <p className="text-xs text-muted-foreground mt-1">Short efficiency summary and suggested optimization for quick review.</p>
+                                    </div>
+
+                                    <div className="flex flex-col items-end text-xs text-muted-foreground">
+                                      <div className="text-right">
+                                        <div className="text-xxs">Runtime</div>
+                                        <div className="font-semibold text-nowrap text-primary">{teacherAIReport.executionTimeMs ? `${teacherAIReport.executionTimeMs.toFixed(2)} ms` : 'N/A'}</div>
+                                      </div>
+                                      <div className="mt-2 text-right">
+                                        <div className="text-xxs">Memory</div>
+                                        <div className="font-semibold text-nowrap text-primary">{teacherAIReport.memoryKb ? `${(teacherAIReport.memoryKb / 1024).toFixed(2)} MB` : 'N/A'}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 grid grid-cols-2 gap-3">
+                                    <div className="p-3 bg-muted/20 rounded-md">
+                                      <div className="text-xxs text-muted-foreground font-medium text-primary">Time Complexity</div>
+                                      <div className="font-mono font-semibold mt-1 break-words text-sm">{teacherAIReport.timeComplexity || 'N/A'}</div>
+                                    </div>
+                                    <div className="p-3 bg-muted/20 rounded-md">
+                                      <div className="text-xxs text-muted-foreground font-medium text-primary">Space Complexity</div>
+                                      <div className="font-mono font-semibold mt-1 break-words text-sm">{teacherAIReport.spaceComplexity || 'N/A'}</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </Card>
+                          )}
                         </div>
                       )}
 

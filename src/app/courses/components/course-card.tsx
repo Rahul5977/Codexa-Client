@@ -96,13 +96,13 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
             {isTeacher && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:cursor-pointer">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={copyCode}>
-                  <Copy className="mr-2 h-4 w-4" />
+                  <Copy className="mr-2 h-4 w-4 hover:cursor-pointer" />
                   Copy Code
                 </DropdownMenuItem>
                 <DropdownMenuItem>
@@ -134,7 +134,7 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
               <p className="text-sm font-medium">Course Code</p>
               <p className="text-lg font-mono font-bold">{course.code}</p>
             </div>
-            <Button variant="ghost" size="sm" onClick={copyCode}>
+            <Button variant="ghost" size="sm" onClick={copyCode} className="hover:cursor-pointer">
               <Copy className="h-4 w-4" />
             </Button>
           </div>}
@@ -186,16 +186,11 @@ export function CourseCard({ course, isTeacher, onDelete }: CourseCardProps) {
 
         <CardFooter className="border-t bg-muted/50 py-3">
           <div className="flex w-full items-center justify-between">
-            <Button variant="outline" size="sm" onClick={handleCourseClick}>
+            <Button variant="outline" size="sm" onClick={handleCourseClick} className="hover:cursor-pointer">
               <ExternalLink className="mr-2 h-4 w-4" />
               View Course
             </Button>
-            {isTeacher && (
-              <Button variant="ghost" size="sm">
-                <Settings className="mr-2 h-4 w-4" />
-                Manage
-              </Button>
-            )}
+            {/* Manage button removed - not used */}
           </div>
         </CardFooter>
       </Card>

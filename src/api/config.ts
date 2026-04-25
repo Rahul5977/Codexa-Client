@@ -3,6 +3,7 @@ export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
   AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:3000/api/auth',
   CLASSROOM_SERVICE_URL: import.meta.env.VITE_CLASSROOM_SERVICE_URL || 'http://localhost:3003/api',
+  COMMUNITY_SERVICE_URL: import.meta.env.VITE_COMMUNITY_SERVICE_URL || 'http://localhost:8007/api/community',
   TIMEOUT: 10000,
   MOCK_ENABLED: import.meta.env.VITE_USE_MOCK_DATA === 'true', // Default to false, enable with env var
 } as const
